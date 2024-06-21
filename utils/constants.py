@@ -1,0 +1,13 @@
+# Nombres argumentos
+NAME_BATCH_SIZE = "batch_size"
+NAME_EPOCS = "epochs"
+NAME_INPUT_SIZE = "input_size"
+NAME_DROP_PATH = "drop_path"
+NAME_WEIGTH_DECAY = "weight_decay"
+NAME_LEARNING_RATE = "lr"
+NAME_BASE_LEARNING_RATE = "blr"
+NAME_WARMUP_EPOCHS = "warmup_epochs"
+NAME_DATA_PATH = "data_path"
+NAME_NUMBER_CLASSES = "num_classes"
+NAME_OUTPUT_DIR = "output_dir"
+NAME_DEVICE = "device"
