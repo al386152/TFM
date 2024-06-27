@@ -39,14 +39,24 @@ def get_args_parser():
     parser.add_argument(f"--{con.NAME_DEVICE}", default="cuda", 
                         help="device to use for training / testing")
     
-    parser.add_argument(f"--{con.NAME_MODEL}", default="VGG", 
+    parser.add_argument(f"--{con.NAME_MODEL}", default="vgg19", 
                         help="The model's name")
     
     return parser
 
+def check_args(args:dict):
+
+    if args[con.NAME_MODEL] not in con.POSSIBLE_MODELS:
+        argparse.ArgumentError(None, f"{con.NAME_MODEL}. Received: {args[con.NAME_MODEL]}. Expected one of {str(con.POSSIBLE_MODELS)}")
+
+    
 def get_dict_args():
     args = get_args_parser()
-    return vars(args)
+    dict_args = vars(args)
+
+    check_args()
+
+    return dict_args
 
 
 if __name__ == "__main__":

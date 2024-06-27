@@ -47,13 +47,65 @@ def congelar_capas_desde_final(model, capas_entrenar_final = -1):
 def transfer_learning(model, capas_entrenar_final = -1, salidas = 5):
 
     model = congelar_capas_desde_final(model, capas_entrenar_final)
-    num_ftrs = model.fc.in_features    
+    """num_ftrs = model.fc.in_features    
     #num_out = model.fc.out_features
     print("model.fc.out_features: ", model.fc.out_features)
     model.fc = nn.Sequential(
                 nn.Linear(num_ftrs, salidas),
                 nn.LayerNorm(salidas)
             )
-    
+    """
 
     return model
+
+
+def train_one_epoch(model, epoch_index, tb_writer, training_loader, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None):
+    
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
+    running_loss= 0
+
+    for i, data in enumerate(training_loader):
+        # Every data instance is an input + label pair
+        inputs, labels = data
+
+        # Zero your gradients for every batch!
+        optimizer.zero_grad()
+
+        # Make predictions for this batch
+        outputs = model(inputs)
+
+        # Compute the loss and its gradients
+        loss = loss_func(outputs, labels)
+        loss.backward()
+
+        # Adjust learning weights
+        optimizer.step()
+
+        # Gather data and report
+        running_loss += loss.item()
+        if i % 1000 == 999:
+            last_loss = running_loss / 1000 # loss per batch
+            print('  batch {} loss: {}'.format(i + 1, last_loss))
+            tb_x = epoch_index * len(training_loader) + i + 1
+            tb_writer.add_scalar('Loss/train', last_loss, tb_x)
+            running_loss = 0.
+
+    return last_loss
+
+# https://stackoverflow.com/questions/71998978/early-stopping-in-pytorch
+class EarlyStopper:
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_validation_loss = float('inf')
+
+    def early_stop(self, validation_loss):
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+        elif validation_loss > (self.min_validation_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
