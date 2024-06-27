@@ -39,6 +39,9 @@ def get_args_parser():
     parser.add_argument(f"--{con.NAME_DEVICE}", default="cuda", 
                         help="device to use for training / testing")
     
+    parser.add_argument(f"--{con.NAME_MODEL}", default="VGG", 
+                        help="The model's name")
+    
     return parser
 
 def get_dict_args():
