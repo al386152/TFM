@@ -1,5 +1,5 @@
 import argparse
-import constants as con
+from . import constants as con
 
 
 def get_args_parser():
@@ -33,13 +33,13 @@ def get_args_parser():
 
     parser.add_argument(f"--{con.NAME_DATA_PATH}", default="../Datasets/MESSIDOR2", type=str,
                         help="dataset path")
-    parser.add_argument(f"--{con.NAME_OUTPUT_DIR}", default="./output_dir",
+    parser.add_argument(f"--{con.NAME_OUTPUT_DIR}", default="./output_dir", type=str,
                         help="path where to save, empty for no saving")
     
-    parser.add_argument(f"--{con.NAME_DEVICE}", default="cuda", 
+    parser.add_argument(f"--{con.NAME_DEVICE}", default="cuda", type=str,  
                         help="device to use for training / testing")
     
-    parser.add_argument(f"--{con.NAME_MODEL}", default="vgg19", 
+    parser.add_argument(f"--{con.NAME_MODEL}", default="vgg19", type=str,
                         help="The model's name")
     
     return parser
@@ -47,16 +47,21 @@ def get_args_parser():
 def check_args(args:dict):
 
     if args[con.NAME_MODEL] not in con.POSSIBLE_MODELS:
-        argparse.ArgumentError(None, f"{con.NAME_MODEL}. Received: {args[con.NAME_MODEL]}. Expected one of {str(con.POSSIBLE_MODELS)}")
+        texto = f"{con.NAME_MODEL}. Received: {args[con.NAME_MODEL]}. Expected one of {str(con.POSSIBLE_MODELS)}"
+        print(texto)
+        argparse.ArgumentError(None, texto)
 
     
 def get_dict_args():
-    args = get_args_parser()
-    dict_args = vars(args)
+    args = vars(get_args_parser().parse_args())    
 
-    check_args()
+    check_args(args)
+    
+    print("Arguments:")
+    for k in args:
+        print(f"{k}: {args[k]}")
 
-    return dict_args
+    return args
 
 
 if __name__ == "__main__":

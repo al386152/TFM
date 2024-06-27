@@ -50,7 +50,7 @@ def leer_csv(csv_path: str, data_path: str) -> Dict[str, str]:
     
     return dict_data
 
-def calcular_proporciones(datos: dict)-> dict[str, float]:
+def calcular_proporciones(datos: dict)-> Dict[str, float]:
 
     # Hay que mantener las proporciones entre clases
     num_total_elementos = 0  # al final será equivalente a: len(datos.values())
@@ -68,7 +68,7 @@ def calcular_proporciones(datos: dict)-> dict[str, float]:
     return {clave: (dict_num_tipos[clave] / num_total_elementos) for clave in dict_num_tipos}
 
 
-def repartir_datos(datos: dict, dict_porcentajes_tipo: dict[str, float]) -> Dict[str, Dict[str, str]]:
+def repartir_datos(datos: dict, dict_porcentajes_tipo: Dict[str, float]) -> Dict[str, Dict[str, str]]:
 
     dict_elementos_escogidos = dict()
     
