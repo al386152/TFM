@@ -12,6 +12,8 @@ NAME_NUMBER_CLASSES = "num_classes"
 NAME_OUTPUT_DIR = "output_dir"
 NAME_DEVICE = "device"
 NAME_MODEL = "model"
+PARTIAL_MODELS_PATH = "partial_models_path"
+SUMMARIES_PATH = "Summaries"
 
 TEST_FOLDER_NAME = "test"
 VALIDATION_FOLDER_NAME = "val"
@@ -20,6 +22,11 @@ LIST_FOLDER_NAMES = [TEST_FOLDER_NAME, VALIDATION_FOLDER_NAME, TRAIN_FOLDER_NAME
 
 POSSIBLE_MODELS = ["vgg19", "resnet50"]
 
+WIDTH_IMAGES = 512
+HEIGHT_IMAGES = 512
+
+NUM_GUIONES = 16
+
 #Esto es lo más similar a una macro de C
 def OUTPUT_MODEL_NAME(name, number_clases):
-    return f"ft_{name}_{number_clases}.pth"
+    return f"model_{name}_{number_clases}_outputs.pth"

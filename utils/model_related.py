@@ -1,4 +1,5 @@
 import torch
+from .constants import NUM_GUIONES
 
 def transfer_learning(model, capas_entrenar_final = -1):
 
@@ -17,7 +18,7 @@ def transfer_learning(model, capas_entrenar_final = -1):
             print(f"{child} |",end=' ')    
             list_model_children.append(child)
             print("len(list(child.parameters())): ", len(list(child.parameters())))            
-    print('-' * 4)
+    print('-' * NUM_GUIONES)
     
     print("len(list_model_children): ", len(list_model_children))
     if capas_entrenar_final != 0:
@@ -38,37 +39,41 @@ def transfer_learning(model, capas_entrenar_final = -1):
 
 def fine_tuning(model, model_name, outputs, ):
     
-        print("Adding finne tuning layers")                        
+    print("Adding finne tuning layers")                        
 
-        if model_name == "vgg19":
-            num_ftrs = model.classifier[6].in_features
-            #num_ftrs = model.classifier[6].out_features
-            print("model.classifier[6].in_features: ", model.classifier[6].out_features)            
-            #print("model.classifier[6].out_features: ", model.classifier[6].out_features)
+    if model_name == "vgg19":
+        num_ftrs = model.classifier[6].in_features
+        #num_ftrs = model.classifier[6].out_features
+        #print("model.classifier[6].in_features: ", model.classifier[6].out_features)            
+        #print("model.classifier[6].out_features: ", model.classifier[6].out_features)
 
-            model.classifier[6] = torch.nn.Sequential(
-                    #model.classifier[6],
-                    torch.nn.Linear(num_ftrs, outputs),
-                    torch.nn.LayerNorm(outputs)
-                )
-        elif model_name == "resnet50":
-            
-            num_ftrs = model.fc.in_features
-            print("model.fc.in_features: ", model.fc.in_features)
-            #num_ftrs = model.fc.out_features
-            print("model.fc.out_features: ", model.fc.out_features)
+        model.classifier[6] = torch.nn.Sequential(
+                #model.classifier[6],
+                torch.nn.Linear(num_ftrs, outputs),
+                torch.nn.LayerNorm(outputs)
+            )
+    elif model_name == "resnet50":
+        
+        num_ftrs = model.fc.in_features
+        print("model.fc.in_features: ", model.fc.in_features)
+        #num_ftrs = model.fc.out_features
+        print("model.fc.out_features: ", model.fc.out_features)
 
-            model.fc = torch.nn.Sequential(
-                    #model.fc, 
-                    torch.nn.Linear(num_ftrs, outputs),
-                    torch.nn.LayerNorm(outputs)
-                )
-        #else: otros casos 
+        model.fc = torch.nn.Sequential(
+                #model.fc, 
+                torch.nn.Linear(num_ftrs, outputs),
+                torch.nn.LayerNorm(outputs)
+            )
+    #else: otros casos 
+
+
+    return model
 
 def train_one_epoch(model, epoch_index, tb_writer, training_loader, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None):
     
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
     running_loss= 0
+    last_loss = 0
 
     for i, data in enumerate(training_loader):
         # Every data instance is an input + label pair
@@ -91,9 +96,9 @@ def train_one_epoch(model, epoch_index, tb_writer, training_loader, loss_func=to
         running_loss += loss.item()
         if i % 1000 == 999:
             last_loss = running_loss / 1000 # loss per batch
-            print('  batch {} loss: {}'.format(i + 1, last_loss))
+            print("  batch {} loss: {}".format(i + 1, last_loss))
             tb_x = epoch_index * len(training_loader) + i + 1
-            tb_writer.add_scalar('Loss/train', last_loss, tb_x)
+            tb_writer.add_scalar("Loss/train", last_loss, tb_x)
             running_loss = 0.
 
     return last_loss

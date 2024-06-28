@@ -41,7 +41,14 @@ def get_args_parser():
     
     parser.add_argument(f"--{con.NAME_MODEL}", default="vgg19", type=str,
                         help="The model's name")
+                        #help="Path to the local model or the model's name")
     
+    parser.add_argument(f"--{con.PARTIAL_MODELS_PATH}", default="./partial_models", type=str,
+                    help="Path to the folder where the best models will be stored")
+    
+    parser.add_argument(f"--{con.SUMMARIES_PATH}", default="./Summaries", type=str,
+                help="Path to the folder where the summaries will be stored")
+
     return parser
 
 def check_args(args:dict):
@@ -59,7 +66,8 @@ def get_dict_args():
     
     print("Arguments:")
     for k in args:
-        print(f"{k}: {args[k]}")
+        print(f"\t{k}: {args[k]}")
+    print('-' * con.NUM_GUIONES)
 
     return args
 
@@ -71,7 +79,7 @@ if __name__ == "__main__":
     dict_params = get_dict_args()
 
     print(dict_params)
-    print('-' * 8)
+    print('-' * con.NUM_GUIONES)
 
     for k in dict_params:
         print(f"dict_params[{k}]: {dict_params[k]}")
