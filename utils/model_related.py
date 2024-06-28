@@ -1,7 +1,6 @@
 import torch
-import torch.nn as nn
 
-def congelar_capas_desde_final(model, capas_entrenar_final = -1):
+def transfer_learning(model, capas_entrenar_final = -1):
 
     if capas_entrenar_final == -1:
         return model
@@ -32,32 +31,39 @@ def congelar_capas_desde_final(model, capas_entrenar_final = -1):
             #print(f"{param} |\|",end=' ')
             param.requires_grad = False   
 
-    # Añadimos nuevas capas
-    #num_ftrs = model.fc.in_features    
-    #num_out = model.fc.out_features
-    #print("model.fc.out_features: ", model.fc.out_features)
-    #model.fc = nn.Linear(num_ftrs, salidas)
-    
     # Nota: En algún punto, ya se añade una capa con las salidas esperadas.
     print(f"{'-'*4} Fin función transfer learning {'-'*4}")
 
     return model
 
+def fine_tuning(model, model_name, outputs, ):
+    
+        print("Adding finne tuning layers")                        
 
-def transfer_learning(model, capas_entrenar_final = -1, salidas = 5):
+        if model_name == "vgg19":
+            num_ftrs = model.classifier[6].in_features
+            #num_ftrs = model.classifier[6].out_features
+            print("model.classifier[6].in_features: ", model.classifier[6].out_features)            
+            #print("model.classifier[6].out_features: ", model.classifier[6].out_features)
 
-    model = congelar_capas_desde_final(model, capas_entrenar_final)
-    """num_ftrs = model.fc.in_features    
-    #num_out = model.fc.out_features
-    print("model.fc.out_features: ", model.fc.out_features)
-    model.fc = nn.Sequential(
-                nn.Linear(num_ftrs, salidas),
-                nn.LayerNorm(salidas)
-            )
-    """
+            model.classifier[6] = torch.nn.Sequential(
+                    #model.classifier[6],
+                    torch.nn.Linear(num_ftrs, outputs),
+                    torch.nn.LayerNorm(outputs)
+                )
+        elif model_name == "resnet50":
+            
+            num_ftrs = model.fc.in_features
+            print("model.fc.in_features: ", model.fc.in_features)
+            #num_ftrs = model.fc.out_features
+            print("model.fc.out_features: ", model.fc.out_features)
 
-    return model
-
+            model.fc = torch.nn.Sequential(
+                    #model.fc, 
+                    torch.nn.Linear(num_ftrs, outputs),
+                    torch.nn.LayerNorm(outputs)
+                )
+        #else: otros casos 
 
 def train_one_epoch(model, epoch_index, tb_writer, training_loader, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None):
     

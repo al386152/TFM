@@ -12,26 +12,22 @@ from torchvision.models import vgg19, resnet50
 from torch.utils.tensorboard import SummaryWriter
 
 
-def load_model(args: dict, fine_tuning:bool = True) -> torch.nn.Module:
+# TODO: comprobar de que vaya bien
+def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -> torch.nn.Module:
 
-    # TODO: Por hacer entero
     model = None
     if args[con.NAME_MODEL] == "vgg19":
         model = vgg19(weights="IMAGENET1K_V1")
     elif args[con.NAME_MODEL] == "resnet50":
         model = resnet50(weights="IMAGENET1K_V1")
-
     #else: pass
 
-    if fine_tuning:
-        num_ftrs = model.fc.in_features    
-        #num_out = model.fc.out_features
-        print("model.fc.out_features: ", model.fc.out_features)
-        model.fc = torch.nn.Sequential(
-                    torch.nn.Linear(num_ftrs, args[con.NAME_NUMBER_CLASSES]),
-                    torch.nn.LayerNorm(args[con.NAME_NUMBER_CLASSES])
-                )
-
+    if fine_tuning: 
+        model = mr.fine_tuning(model=model, model_name=args[con.NAME_MODEL], 
+                    outputs=args[con.NAME_NUMBER_CLASSES])
+    
+    model = mr.transfer_learning(model, capas_entrenar_final)
+        
     return model
 
 # TODO: Por comprobar de que está bien
@@ -58,7 +54,7 @@ def load_data_loaders(args: dict, datasets:dict) -> dict:
     return {
         folder_name : torch.utils.data.DataLoader(
             datasets[folder_name], sampler=samplers[folder_name],
-            batch_size=args.batch_size,
+            batch_size=args[con.NAME_BATCH_SIZE],
             # pin_memory=args.pin_mem,
             # drop_last=True,
             # shuffle = True # Con el Sampler debería hacerse automáticamente.
@@ -69,9 +65,11 @@ def load_data_loaders(args: dict, datasets:dict) -> dict:
 # TODO: Comprobar de que está bien.
 def load_datasets(args:dict) -> dict:
 
+    print()
+
     return {
         folder_name:
-        datasets.ImageFolder(root = args[os.path.join(con.NAME_DATA_PATH, folder_name)])
+        datasets.ImageFolder(root = os.path.join(args[con.NAME_DATA_PATH], folder_name))
         for folder_name in con.LIST_FOLDER_NAMES
     }
 
@@ -82,23 +80,24 @@ def load_datasets(args:dict) -> dict:
 
 def train_model(args: dict, model, samplers, device):
     
-    model = model.to(device)
-    
+    print( ("-"*8) + "\nStarting to train the model\n" + ("-"*8) )
+    model = model.to(device)    
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     writer = SummaryWriter(f'Proyecto_{timestamp}')
     loss_fn = torch.nn.CrossEntropyLoss()
     early_stopper = mr.EarlyStopper(patience=3, min_delta=10)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     
     best_vloss = float('inf') # Número imposible
 
     for epoch in range(args[con.NAME_EPOCS]):
 
-        print(f"EPOCH {epoch + 1}:")
+        print(f"Epoch {epoch + 1}:")
 
         model.train(True)
         avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, tb_writer=writer, 
                                       training_loader=samplers[con.TRAIN_FOLDER_NAME], 
-                                      loss_fn=loss_fn)
+                                      loss_func=loss_fn, optimizer=optimizer)
         running_val_loss = 0.0
 
         model.eval()
@@ -130,6 +129,9 @@ def train_model(args: dict, model, samplers, device):
             print(f"Stopping the traning. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
             break
 
+def saving_the_model(args: dict, model):
+
+    torch.save(model.state_dict(), con.OUTPUT_MODEL_NAME(name=args[con.NAME_MODEL], number_clases=args[con.NAME_NUMBER_CLASSES] ))
 
 def inference(args: dict, model, samplers):
     pass
@@ -138,13 +140,14 @@ def inference(args: dict, model, samplers):
 def main(args: dict):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+    print(f"Device: {device}")
     datasets = load_datasets(args)
+    print(f"Datasets:\n{datasets}\n---")
     samplers = load_data_loaders(args, datasets)
+    print(f"Samplers:\n{samplers}\n---")
     model = load_model(args)
-    
+    print(f"Model: {model}")
     train_model(args, model=model, samplers=samplers, device=device)
-
 
 
 if __name__ == "__main__":    

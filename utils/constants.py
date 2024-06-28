@@ -19,3 +19,7 @@ TRAIN_FOLDER_NAME = "train"
 LIST_FOLDER_NAMES = [TEST_FOLDER_NAME, VALIDATION_FOLDER_NAME, TRAIN_FOLDER_NAME]
 
 POSSIBLE_MODELS = ["vgg19", "resnet50"]
+
+#Esto es lo más similar a una macro de C
+def OUTPUT_MODEL_NAME(name, number_clases):
+    return f"ft_{name}_{number_clases}.pth"
