@@ -17,15 +17,32 @@ from torch.utils.tensorboard import SummaryWriter
 def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -> torch.nn.Module:
 
     model = None
-    if args[con.NAME_MODEL] == "vgg19":
-        model = vgg19(weights="IMAGENET1K_V1")
-    elif args[con.NAME_MODEL] == "resnet50":
-        model = resnet50(weights="IMAGENET1K_V1")
-    #else: pass
+    model_name = args[con.NAME_MODEL]
+    model_weights_path = args[con.NAME_MODEL_WEIGHTS]
+
+    if model_weights_path and os.path.isfile(model_weights_path):        
+        model_weights_path = model_weights_path
+        weights = None
+    else: 
+        weights = con.DEFAULT_MODEL_WEIGHTS
+    
+    print("Cargando lo siguientes pesos: ", model_weights_path)
+
+    if model_name == "vgg19":
+        model = vgg19(weights = weights)        
+
+    elif model_name == "resnet50":
+        model = resnet50(weights = weights)
+    #else: pass    
 
     if fine_tuning: 
-        model = mr.fine_tuning(model=model, model_name=args[con.NAME_MODEL], 
+        model = mr.fine_tuning(model=model, model_name=model_name, 
                     outputs=args[con.NAME_NUMBER_CLASSES])
+        
+    # TODO: Tiene que haber alguna forma de no tener que comprobar eso o comprobarlo arriba.
+    if model_weights_path:
+        # Es importante cargarlo *DESPUES* del fine tuning
+        model.load_state_dict(torch.load(model_weights_path))        
     
     model = mr.transfer_learning(model, capas_entrenar_final)
         

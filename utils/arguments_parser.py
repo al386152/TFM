@@ -49,6 +49,10 @@ def get_args_parser():
     parser.add_argument(f"--{con.SUMMARIES_PATH}", default="./Summaries", type=str,
                 help="Path to the folder where the summaries will be stored")
 
+    parser.add_argument(f"--{con.NAME_MODEL_WEIGHTS}", default=None, type=str,
+                help="Model's weights path")
+
+
     return parser
 
 def check_args(args:dict):
