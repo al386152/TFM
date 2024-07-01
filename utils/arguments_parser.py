@@ -1,6 +1,6 @@
 import argparse
 from . import constants as con
-
+import logging
 
 def get_args_parser():
     parser = argparse.ArgumentParser(prog="Proyecto", 
@@ -59,33 +59,31 @@ def check_args(args:dict):
 
     if args[con.NAME_MODEL] not in con.POSSIBLE_MODELS:
         texto = f"{con.NAME_MODEL}. Received: {args[con.NAME_MODEL]}. Expected one of {str(con.POSSIBLE_MODELS)}"
-        print(texto)
+        logging.error(texto)
         argparse.ArgumentError(None, texto)
 
     
-def get_dict_args():
-    print("get_dict_args")
+def get_dict_args():    
+
+    logging.debug("get_dict_args")
     args = vars(get_args_parser().parse_args())    
-    print("check_args")
+    logging.debug("check_args")
     check_args(args)
     
-    print("Arguments:")
+    logging.info("Arguments:")
     for k in args:
-        print(f"\t{k}: {args[k]}")
-    print('-' * con.NUM_GUIONES)
+        logging.info(f"\t{k}: {args[k]}")
+    logging.info('-' * con.NUM_GUIONES)
 
     return args
 
 
 #test
 if __name__ == "__main__":
-
-    #print(args)
-
     dict_params = get_dict_args()
 
-    print(dict_params)
-    print('-' * con.NUM_GUIONES)
+    logging.debug(dict_params)
+    logging.debug('-' * con.NUM_GUIONES)
 
     for k in dict_params:
-        print(f"dict_params[{k}]: {dict_params[k]}")
+        logging.debug(f"dict_params[{k}]: {dict_params[k]}")

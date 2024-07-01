@@ -18,6 +18,7 @@ PARTIAL_MODELS_PATH = "partial_models_path"
 SUMMARIES_PATH = "summaries"
 NAME_MODEL_WEIGHTS = "model_weights"
 
+
 TEST_FOLDER_NAME = "test"
 VALIDATION_FOLDER_NAME = "val"
 TRAIN_FOLDER_NAME = "train"

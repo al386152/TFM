@@ -1,4 +1,0 @@
-conda create -n proyecto python=3.8 -y
-
-conda install -c conda-forge opencv
-
