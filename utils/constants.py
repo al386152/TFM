@@ -1,3 +1,5 @@
+from torchvision.models import vgg19, resnet50, resnet152
+
 # Nombres argumentos
 NAME_BATCH_SIZE = "batch_size"
 NAME_EPOCS = "epochs"
@@ -21,14 +23,21 @@ VALIDATION_FOLDER_NAME = "val"
 TRAIN_FOLDER_NAME = "train"
 LIST_FOLDER_NAMES = [TEST_FOLDER_NAME, VALIDATION_FOLDER_NAME, TRAIN_FOLDER_NAME]
 
-POSSIBLE_MODELS = ["vgg19", "resnet50"]
-DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
-
 WIDTH_IMAGES = 512
 HEIGHT_IMAGES = 512
 
 NUM_GUIONES = 16
 
+SWITCH_MODELOS = {
+    "vgg19": vgg19,
+    "resnet50": resnet50,
+    "resnet152": resnet152
+}
+
+POSSIBLE_MODELS = SWITCH_MODELOS.keys()
+DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
+
 #Esto es lo más similar a una macro de C
 def OUTPUT_MODEL_NAME(name, number_clases):
     return f"model_{name}_{number_clases}_outputs.pth"
+

@@ -1,5 +1,8 @@
 import torch
 from .constants import NUM_GUIONES
+import numpy as np
+from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score, confusion_matrix
+
 
 def transfer_learning(model, capas_entrenar_final = -1):
 
@@ -52,7 +55,8 @@ def fine_tuning(model, model_name, outputs, ):
                 torch.nn.Linear(num_ftrs, outputs),
                 torch.nn.LayerNorm(outputs)
             )
-    elif model_name == "resnet50":
+    #elif model_name == "resnet50":
+    elif "resnet" in model_name:
         
         num_ftrs = model.fc.in_features
         print("model.fc.in_features: ", model.fc.in_features)
@@ -102,6 +106,37 @@ def train_one_epoch(model, epoch_index, tb_writer, training_loader, loss_func=to
             running_loss = 0.
 
     return last_loss
+
+def evaluate_model(model, dataloader, device):
+    model.eval()
+    all_preds = []
+    all_labels = []
+    
+    with torch.no_grad():
+        for inputs, labels in dataloader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            _, preds = torch.max(outputs, 1)
+            all_preds.append(preds.cpu().numpy())
+            all_labels.append(labels.cpu().numpy())
+    
+    all_preds = np.concatenate(all_preds)
+    all_labels = np.concatenate(all_labels)
+    
+    accuracy = accuracy_score(all_labels, all_preds)
+    roc_auc = roc_auc_score(all_labels, all_preds, average='weighted', multi_class='ovo') if len(np.unique(all_labels)) > 2 else roc_auc_score(all_labels, all_preds)
+    roc_auc = 0.0
+    pr_auc = average_precision_score(all_labels, all_preds, average='weighted')
+    f1 = f1_score(all_labels, all_preds, average='weighted')
+    conf_matrix = confusion_matrix(all_labels, all_preds)
+    
+    print(f'Accuracy: {accuracy:.4f}')
+    print(f'ROC-AUC: {roc_auc:.4f}')
+    print(f'PR-AUC: {pr_auc:.4f}')
+    print(f'F1 Score: {f1:.4f}')
+    print(f'Confusion Matrix:\n{conf_matrix}')
+
+    return accuracy, roc_auc, pr_auc, f1, conf_matrix
 
 # https://stackoverflow.com/questions/71998978/early-stopping-in-pytorch
 class EarlyStopper:

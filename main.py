@@ -1,6 +1,8 @@
 from typing import *
 from datetime import datetime
 
+import torch.utils
+
 import utils.arguments_parser as ap
 import utils.constants as con
 import utils.model_related as mr
@@ -9,37 +11,39 @@ from datetime import datetime
 
 import torch
 from torchvision import datasets, transforms
-from torchvision.models import vgg19, resnet50
+
 from torch.utils.tensorboard import SummaryWriter
 
 
-# TODO: Añadir de que, si se para como "nombre" la ruta a un modelo, se cargue ese.
 def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -> torch.nn.Module:
 
     model = None
     model_name = args[con.NAME_MODEL]
     model_weights_path = args[con.NAME_MODEL_WEIGHTS]
 
-    if model_weights_path and os.path.isfile(model_weights_path):        
+    print("model_weights_path: ", model_weights_path)
+
+    if model_weights_path is not None and os.path.isfile(model_weights_path):        
         model_weights_path = model_weights_path
         weights = None
     else: 
         weights = con.DEFAULT_MODEL_WEIGHTS
     
-    print("Cargando lo siguientes pesos: ", model_weights_path)
+    print(f"Cargando los siguientes pesos: \'{weights if weights is not None else model_weights_path}\'")
 
-    if model_name == "vgg19":
-        model = vgg19(weights = weights)        
-
-    elif model_name == "resnet50":
-        model = resnet50(weights = weights)
-    #else: pass    
+    model = con.SWITCH_MODELOS[model_name](weights = weights)
+    #if model_name == "vgg19":
+    #    model = vgg19(weights = weights)
+    #elif model_name == "resnet50":
+    #    model = resnet50(weights = weights)
+    #elif model_name == "resnet152":
+    #    model = resnet152(weights = weights)
+    #else: #Aquí iría algo para que se puedan pasar alguno que no esté definido
 
     if fine_tuning: 
         model = mr.fine_tuning(model=model, model_name=model_name, 
                     outputs=args[con.NAME_NUMBER_CLASSES])
-        
-    # TODO: Tiene que haber alguna forma de no tener que comprobar eso o comprobarlo arriba.
+                
     if model_weights_path:
         # Es importante cargarlo *DESPUES* del fine tuning
         model.load_state_dict(torch.load(model_weights_path))        
@@ -65,8 +69,9 @@ def load_datasets(args:dict) -> dict:
 
 def load_samplers(datasets: Tuple)-> dict:
 
-    return {
-        folder_name: torch.utils.data.SequentialSampler(folder_name)
+    return {        
+        #folder_name: torch.utils.data.SequentialSampler(folder_name)
+        folder_name: torch.utils.data.RandomSampler(datasets[folder_name])
         for folder_name in con.LIST_FOLDER_NAMES
     }
 
@@ -122,13 +127,18 @@ def train_model(args: dict, model, samplers, device):
         running_val_loss = 0.0
 
         model.eval()
-            # Disable gradient computation and reduce memory consumption.
+            
+        # Disable gradient computation and reduce memory consumption.
         with torch.no_grad():
-            for i, vdata in enumerate(samplers[con.VALIDATION_FOLDER_NAME]):
-                vinputs, vlabels = vdata
-                voutputs = model(vinputs)
+            for i, vdata in enumerate(samplers[con.VALIDATION_FOLDER_NAME]):                                
+                vinputs, vlabels = vdata                
+                voutputs = model(vinputs)                
                 vloss = loss_fn(voutputs, vlabels)
                 running_val_loss += vloss
+
+                print("vinputs:\n", vinputs)
+                print("vlabels:\n", vlabels)
+                print("voutputs:\n", voutputs)
     
         avg_val_loss = running_val_loss / (i + 1)
         print(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")
@@ -147,10 +157,7 @@ def train_model(args: dict, model, samplers, device):
                                       model_name) 
 
             torch.save(model.state_dict(), model_path)
-            #save_model = True
-        else:
-            #save_model = False
-            pass
+
 
         # Para el early stopping
         if early_stopper.early_stop(running_val_loss):
@@ -167,8 +174,9 @@ def saving_the_model(args: dict, model):
     torch.save(model.state_dict(),  model_name)
 
 def inference(args: dict, model, samplers):
-    pass
+    model.eval()
 
+    
 def get_training_time_HMS_format(time_start, time_end):
     intervalo = time_end - time_start
 
@@ -195,8 +203,20 @@ def main(args: dict):
     print(f"Device: {device}")
 
     datasets = load_datasets(args)
+    
+    #for dataset in datasets:
+    #    print(f"len(dataset): {len(dataset)}")
+    #    print(f"dataset:\n{str(dataset)}")
+    #print(datasets)
+
     #print(f"Datasets:\n{datasets}\n---")
     samplers = load_data_loaders(args, datasets)
+    
+    #for sampler in samplers:
+    #    print(f"len(sampler): {len(sampler)}")
+    #    print(f"sampler:\n{str(sampler)}")
+    #print(samplers)
+
     #print(f"Samplers:\n{samplers}\n---")
     model = load_model(args)
     print(f"Model: {model}")
@@ -205,8 +225,11 @@ def main(args: dict):
     train_model(args, model=model, samplers=samplers, device=device)
     tiempo_entrenamiento = get_training_time_HMS_format(t_inicio, datetime.now())
     print(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
-    #if save_model: saving_the_model(args, model)
+        
+    metricas = mr.evaluate_model(model=model,dataloader=samplers[con.VALIDATION_FOLDER_NAME], device=device)
+    #accuracy, roc_auc, pr_auc, f1, conf_matrix = metricas
     saving_the_model(args, model)
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
+    print("inicio")    
     main(ap.get_dict_args())

@@ -64,8 +64,9 @@ def check_args(args:dict):
 
     
 def get_dict_args():
+    print("get_dict_args")
     args = vars(get_args_parser().parse_args())    
-
+    print("check_args")
     check_args(args)
     
     print("Arguments:")
@@ -76,6 +77,7 @@ def get_dict_args():
     return args
 
 
+#test
 if __name__ == "__main__":
 
     #print(args)

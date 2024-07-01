@@ -1,3 +1,4 @@
 torch==2.3.0
 torchvision==0.18
 tensorboard==2.13.0
+scikit-learn==1.3
