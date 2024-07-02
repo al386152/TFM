@@ -16,7 +16,6 @@ NAME_OUTPUT_DIR = "output_dir"
 NAME_DEVICE = "device"
 NAME_MODEL = "model"
 PARTIAL_MODELS_PATH = "partial_models_path"
-SUMMARIES_PATH = "summaries"
 NAME_MODEL_WEIGHTS = "model_weights"
 NAME_SHOW_DEBUG_OUTPUTS = "debug"
 
@@ -34,7 +33,7 @@ LOG_OUTPUT_FORMAT = "[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s"
 WIDTH_IMAGES = 512
 HEIGHT_IMAGES = 512
 
-NUM_GUIONES = 16
+NUM_GUIONES = 4
 
 SWITCH_MODELOS = {
     "vgg19": vgg19,
@@ -46,7 +45,7 @@ POSSIBLE_MODELS = SWITCH_MODELOS.keys()
 DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 
 # Esto no es del todo una constante, pero bueno:
-loggin_level = _levelToName(INFO)
+loggin_level = _levelToName[INFO]
 
 #Esto es lo más similar a una macro de C
 def OUTPUT_MODEL_NAME(name, number_clases):

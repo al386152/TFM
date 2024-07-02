@@ -2,7 +2,6 @@ import os
 
 from typing import *
 from datetime import datetime
-import logging
 
 import torch.utils
 import torch
@@ -11,7 +10,6 @@ from torchvision import datasets, transforms
 import utils.arguments_parser as ap
 import utils.constants as cons
 import utils.model_related as mr
-from torch.utils.tensorboard import SummaryWriter
 from utils.log_writer import getLogWritter
 
 # Esto es para tener el logger
@@ -23,7 +21,7 @@ def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -
     model_name = args[cons.NAME_MODEL]
     model_weights_path = args[cons.NAME_MODEL_WEIGHTS]
 
-    logging.debug(f"model_weights_path: {model_weights_path}")
+    logger.debug(f"model_weights_path: {model_weights_path}")
 
     if model_weights_path is not None and os.path.isfile(model_weights_path):        
         model_weights_path = model_weights_path
@@ -31,7 +29,7 @@ def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -
     else: 
         weights = cons.DEFAULT_MODEL_WEIGHTS
 
-    logging.info(f"Cargando los siguientes pesos: \'{weights if weights is not None else model_weights_path}\'")
+    logger.info(f"Cargando los siguientes pesos: \'{weights if weights is not None else model_weights_path}\'")
 
     model = cons.SWITCH_MODELOS[model_name](weights = weights)
 
@@ -88,17 +86,16 @@ def load_data_loaders(args: dict, datasets:dict) -> dict:
 
 def train_model(args: dict, model, samplers, device):
     
-    logging.info( ('-' * cons.NUM_GUIONES) + "\nStarting to train the model\n" + ('-' * cons.NUM_GUIONES) )
+    logger.info( ('-' * cons.NUM_GUIONES) + "\nStarting to train the model\n" + ('-' * cons.NUM_GUIONES) )
 
     # Preparando las variables
 
     model = model.to(device)
     best_vloss = float('inf') # Número imposible para que en la primera iteración sea menor sí o sí.
     partial_models_path = args[cons.PARTIAL_MODELS_PATH] 
-    summaries_path = args[cons.SUMMARIES_PATH]
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    writer = SummaryWriter( os.path.join(partial_models_path, f'Proyecto_{timestamp}'))
+                                    
     loss_fn = torch.nn.CrossEntropyLoss()
     early_stopper = mr.EarlyStopper(patience=3, min_delta=10)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
@@ -106,16 +103,14 @@ def train_model(args: dict, model, samplers, device):
     # Creando carpetas para las salidas  
     if not os.path.isdir(partial_models_path):
         os.makedirs(partial_models_path)
-    if not os.path.isdir(summaries_path):
-        os.makedirs(summaries_path)
 
     # Entrenando
     for epoch in range(args[cons.NAME_EPOCS]):
 
-        logging.info(f"Epoch [{epoch + 1}]:")
+        logger.info(f"Epoch [{epoch + 1}]:")
 
         model.train(True)
-        avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, tb_writer=writer, 
+        avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, 
                                       training_loader=samplers[cons.TRAIN_FOLDER_NAME], 
                                       loss_func=loss_fn, optimizer=optimizer)
         running_val_loss = 0.0
@@ -130,19 +125,13 @@ def train_model(args: dict, model, samplers, device):
                 vloss = loss_fn(voutputs, vlabels)
                 running_val_loss += vloss
 
-                logging.debug("vinputs:\n", vinputs)
-                logging.debug("vlabels:\n", vlabels)
-                logging.debug("voutputs:\n", voutputs)
+                logger.debug("vinputs:\n", vinputs)
+                logger.debug("vlabels:\n", vlabels)
+                logger.debug("voutputs:\n", voutputs)
+
     
         avg_val_loss = running_val_loss / (i + 1)
-        logging.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")
-        
-        # Log the running loss averaged per batch
-        # for both training and validation
-        writer.add_scalars('Training vs. Validation Loss',
-                        { 'Training' : avg_loss, 'Validation' : avg_val_loss },
-                        epoch + 1)
-        writer.flush()
+        logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
 
         if avg_val_loss < best_vloss:
             best_vloss = avg_val_loss
@@ -154,14 +143,15 @@ def train_model(args: dict, model, samplers, device):
 
         # Para el early stopping
         if early_stopper.early_stop(running_val_loss):
-            logging.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
+            logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
             break        
     
-    logging.info('\n' + ('-' * cons.NUM_GUIONES) + "\nTraining ended\n" + ('-' * cons.NUM_GUIONES))
+    logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
+    
 
 def saving_the_model(args: dict, model):
     model_name = cons.OUTPUT_MODEL_NAME(name=args[cons.NAME_MODEL], number_clases=args[cons.NAME_NUMBER_CLASSES])
-    logging.info(f"Guardado el modelo con el nombre: {model_name}")
+    logger.info(f"Guardado el modelo con el nombre: {model_name}")
     torch.save(model.state_dict(),  model_name)
 
 def inference(args: dict, model, samplers):
@@ -184,40 +174,40 @@ def main(args: dict):
     # Estableciendo el dispositivo en el que se va a trabajar.    
     device = "cpu"
     if "cuda" in args[cons.NAME_DEVICE]:
-        logging.debug(f"cuda in {args[cons.NAME_DEVICE]}")
+        logger.debug(f"cuda in {args[cons.NAME_DEVICE]}")
         if not torch.cuda.is_available():
-            logging.info(" 'torch.cuda' is not available ==> cpu")            
+            logger.info(" 'torch.cuda' is not available ==> cpu")            
             #device = "cpu"
         else:
             device = args[cons.NAME_DEVICE]
     #else: device = "cpu"
 
     device = torch.device(device)
-    logging.info(f"Device: {device}")
+    logger.info(f"Device: {device}")
 
     datasets = load_datasets(args)
     
-    logging.debug(
+    logger.debug(
         "\n".join([f"len(dataset): {len(dataset)}\ndataset:\n{str(dataset)}" for dataset in datasets])
     )
 
-    logging.debug(f"Datasets:\n{datasets}\n---")
+    logger.debug(f"Datasets:\n{datasets}\n---")
     samplers = load_data_loaders(args, datasets)
     
-    logging.debug(
+    logger.debug(
         "\n".join([f"len(sampler): {len(sampler)}\nsampler:\n{str(sampler)}" for sampler in samplers])
     )
 
     
-    logging.debug(f"Samplers:\n{samplers}\n---")
+    logger.debug(f"Samplers:\n{samplers}\n---")
 
     model = load_model(args)
-    logging.info(f"Model: {model}")
+    logger.info(f"Model: {model}")
     #save_model = train_model(args, model=model, samplers=samplers, device=device)
     t_inicio = datetime.now()
     train_model(args, model=model, samplers=samplers, device=device)
     tiempo_entrenamiento = get_training_time_HMS_format(t_inicio, datetime.now())
-    logging.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
+    logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
         
     mr.evaluate_model(model=model,dataloader=samplers[cons.VALIDATION_FOLDER_NAME], device=device)
     #accuracy, roc_auc, pr_auc, f1, conf_matrix = metricas

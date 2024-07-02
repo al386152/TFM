@@ -1,9 +1,10 @@
 import argparse
-from . import constants as cons
 import logging
-from log_writer import getLogWritter
 
-logger = getLogWritter()
+from . import constants as cons
+from .log_writer import getLogWritter
+
+logger = getLogWritter(__name__)
 
 def get_args_parser():
     parser = argparse.ArgumentParser(prog="Proyecto", 
@@ -47,10 +48,7 @@ def get_args_parser():
                         #help="Path to the local model or the model's name")
     
     parser.add_argument(f"--{cons.PARTIAL_MODELS_PATH}", default="./partial_models", type=str,
-                    help="Path to the folder where the best models will be stored")
-    
-    parser.add_argument(f"--{cons.SUMMARIES_PATH}", default="./Summaries", type=str,
-                help="Path to the folder where the summaries will be stored")
+                    help="Path to the folder where the best models will be stored")    
 
     parser.add_argument(f"--{cons.NAME_MODEL_WEIGHTS}", default=None, type=str,
                 help="Model's weights path")
@@ -65,7 +63,7 @@ def check_args(args:dict):
 
     if args[cons.NAME_MODEL] not in cons.POSSIBLE_MODELS:
         texto = f"{cons.NAME_MODEL}. Received: {args[cons.NAME_MODEL]}. Expected one of {str(cons.POSSIBLE_MODELS)}"
-        logging.error(texto)
+        logger.error(texto)
         argparse.ArgumentError(None, texto)
     
     if args[cons.NAME_SHOW_DEBUG_OUTPUTS]:
@@ -74,15 +72,17 @@ def check_args(args:dict):
     
 def get_dict_args():    
 
-    logging.debug("get_dict_args")
+    logger.debug("get_dict_args")
     args = vars(get_args_parser().parse_args())    
-    logging.debug("check_args")
+    logger.debug("check_args")
     check_args(args)
     
-    logging.info("Arguments:")
-    for k in args:
-        logging.info(f"\t{k}: {args[k]}")
-    logging.info('-' * cons.NUM_GUIONES)
+    
+        
+    logger.info("Arguments:" + 
+                '\n'.join([(f"\t{k}: {args[k]}") for k in args]) +
+                '\n' + ('-' * cons.NUM_GUIONES)
+                )
 
     return args
 
@@ -91,8 +91,8 @@ def get_dict_args():
 if __name__ == "__main__":
     dict_params = get_dict_args()
 
-    logging.debug(dict_params)
-    logging.debug('-' * cons.NUM_GUIONES)
+    logger.debug(dict_params)
+    #logger.debug('-' * cons.NUM_GUIONES)
 
     for k in dict_params:
-        logging.debug(f"dict_params[{k}]: {dict_params[k]}")
+        logger.debug(f"dict_params[{k}]: {dict_params[k]}")
