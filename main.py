@@ -9,17 +9,19 @@ import torch
 from torchvision import datasets, transforms
 
 import utils.arguments_parser as ap
-import utils.constants as con
+import utils.constants as cons
 import utils.model_related as mr
-
 from torch.utils.tensorboard import SummaryWriter
+from utils.log_writer import getLogWritter
 
+# Esto es para tener el logger
+logger = getLogWritter(__name__)
 
 def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -> torch.nn.Module:
 
     model = None
-    model_name = args[con.NAME_MODEL]
-    model_weights_path = args[con.NAME_MODEL_WEIGHTS]
+    model_name = args[cons.NAME_MODEL]
+    model_weights_path = args[cons.NAME_MODEL_WEIGHTS]
 
     logging.debug(f"model_weights_path: {model_weights_path}")
 
@@ -27,15 +29,15 @@ def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -
         model_weights_path = model_weights_path
         weights = None
     else: 
-        weights = con.DEFAULT_MODEL_WEIGHTS
+        weights = cons.DEFAULT_MODEL_WEIGHTS
 
     logging.info(f"Cargando los siguientes pesos: \'{weights if weights is not None else model_weights_path}\'")
 
-    model = con.SWITCH_MODELOS[model_name](weights = weights)
+    model = cons.SWITCH_MODELOS[model_name](weights = weights)
 
     if fine_tuning: 
         model = mr.fine_tuning(model=model, model_name=model_name, 
-                    outputs=args[con.NAME_NUMBER_CLASSES])
+                    outputs=args[cons.NAME_NUMBER_CLASSES])
                 
     if model_weights_path:
         # Es importante cargarlo *DESPUES* del fine tuning
@@ -49,15 +51,15 @@ def load_datasets(args:dict) -> dict:
 
     transform = transforms.Compose([
         # Aquí se puede añadir el aumento de datos, aunque prefiero que estén guardados en ficheros.
-        transforms.Resize((con.HEIGHT_IMAGES, con.WIDTH_IMAGES)),
+        transforms.Resize((cons.HEIGHT_IMAGES, cons.WIDTH_IMAGES)),
         transforms.ToTensor()
     ])
 
     return {
         folder_name:
-        datasets.ImageFolder(root = os.path.join(args[con.NAME_DATA_PATH], folder_name),
+        datasets.ImageFolder(root = os.path.join(args[cons.NAME_DATA_PATH], folder_name),
                              transform = transform) 
-        for folder_name in con.LIST_FOLDER_NAMES
+        for folder_name in cons.LIST_FOLDER_NAMES
     }
 
 def load_samplers(datasets: Tuple)-> dict:
@@ -65,7 +67,7 @@ def load_samplers(datasets: Tuple)-> dict:
     return {        
         #folder_name: torch.utils.data.SequentialSampler(folder_name)
         folder_name: torch.utils.data.RandomSampler(datasets[folder_name])
-        for folder_name in con.LIST_FOLDER_NAMES
+        for folder_name in cons.LIST_FOLDER_NAMES
     }
 
 # TODO: Por comprobar de que está bien
@@ -76,24 +78,24 @@ def load_data_loaders(args: dict, datasets:dict) -> dict:
     return {
         folder_name : torch.utils.data.DataLoader(
             datasets[folder_name], sampler=samplers[folder_name],
-            batch_size=args[con.NAME_BATCH_SIZE],
+            batch_size=args[cons.NAME_BATCH_SIZE],
             # pin_memory=args.pin_mem,
             # drop_last=True,
             # shuffle = True # Con el Sampler debería hacerse automáticamente.
         )
-        for folder_name in con.LIST_FOLDER_NAMES
+        for folder_name in cons.LIST_FOLDER_NAMES
     }
 
 def train_model(args: dict, model, samplers, device):
     
-    logging.info( ('-' * con.NUM_GUIONES) + "\nStarting to train the model\n" + ('-' * con.NUM_GUIONES) )
+    logging.info( ('-' * cons.NUM_GUIONES) + "\nStarting to train the model\n" + ('-' * cons.NUM_GUIONES) )
 
     # Preparando las variables
 
     model = model.to(device)
     best_vloss = float('inf') # Número imposible para que en la primera iteración sea menor sí o sí.
-    partial_models_path = args[con.PARTIAL_MODELS_PATH] 
-    summaries_path = args[con.SUMMARIES_PATH]
+    partial_models_path = args[cons.PARTIAL_MODELS_PATH] 
+    summaries_path = args[cons.SUMMARIES_PATH]
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     writer = SummaryWriter( os.path.join(partial_models_path, f'Proyecto_{timestamp}'))
@@ -108,13 +110,13 @@ def train_model(args: dict, model, samplers, device):
         os.makedirs(summaries_path)
 
     # Entrenando
-    for epoch in range(args[con.NAME_EPOCS]):
+    for epoch in range(args[cons.NAME_EPOCS]):
 
         logging.info(f"Epoch [{epoch + 1}]:")
 
         model.train(True)
         avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, tb_writer=writer, 
-                                      training_loader=samplers[con.TRAIN_FOLDER_NAME], 
+                                      training_loader=samplers[cons.TRAIN_FOLDER_NAME], 
                                       loss_func=loss_fn, optimizer=optimizer)
         running_val_loss = 0.0
 
@@ -122,7 +124,7 @@ def train_model(args: dict, model, samplers, device):
             
         # Disable gradient computation and reduce memory consumption.
         with torch.no_grad():
-            for i, vdata in enumerate(samplers[con.VALIDATION_FOLDER_NAME]):                                
+            for i, vdata in enumerate(samplers[cons.VALIDATION_FOLDER_NAME]):                                
                 vinputs, vlabels = vdata                
                 voutputs = model(vinputs)                
                 vloss = loss_fn(voutputs, vlabels)
@@ -145,7 +147,7 @@ def train_model(args: dict, model, samplers, device):
         if avg_val_loss < best_vloss:
             best_vloss = avg_val_loss
             model_name = f"model_{epoch}_{timestamp}.pth"
-            model_path = os.path.join(args[con.PARTIAL_MODELS_PATH], 
+            model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
                                       model_name) 
 
             torch.save(model.state_dict(), model_path)
@@ -155,10 +157,10 @@ def train_model(args: dict, model, samplers, device):
             logging.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
             break        
     
-    logging.info('\n' + ('-' * con.NUM_GUIONES) + "\nTraining ended\n" + ('-' * con.NUM_GUIONES))
+    logging.info('\n' + ('-' * cons.NUM_GUIONES) + "\nTraining ended\n" + ('-' * cons.NUM_GUIONES))
 
 def saving_the_model(args: dict, model):
-    model_name = con.OUTPUT_MODEL_NAME(name=args[con.NAME_MODEL], number_clases=args[con.NAME_NUMBER_CLASSES])
+    model_name = cons.OUTPUT_MODEL_NAME(name=args[cons.NAME_MODEL], number_clases=args[cons.NAME_NUMBER_CLASSES])
     logging.info(f"Guardado el modelo con el nombre: {model_name}")
     torch.save(model.state_dict(),  model_name)
 
@@ -179,18 +181,15 @@ def get_training_time_HMS_format(time_start, time_end):
 
 def main(args: dict):
 
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
-
     # Estableciendo el dispositivo en el que se va a trabajar.    
     device = "cpu"
-    if "cuda" in args[con.NAME_DEVICE]:
-        logging.debug(f"cuda in {args[con.NAME_DEVICE]}")
+    if "cuda" in args[cons.NAME_DEVICE]:
+        logging.debug(f"cuda in {args[cons.NAME_DEVICE]}")
         if not torch.cuda.is_available():
             logging.info(" 'torch.cuda' is not available ==> cpu")            
             #device = "cpu"
         else:
-            device = args[con.NAME_DEVICE]
+            device = args[cons.NAME_DEVICE]
     #else: device = "cpu"
 
     device = torch.device(device)
@@ -220,9 +219,18 @@ def main(args: dict):
     tiempo_entrenamiento = get_training_time_HMS_format(t_inicio, datetime.now())
     logging.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
         
-    metricas = mr.evaluate_model(model=model,dataloader=samplers[con.VALIDATION_FOLDER_NAME], device=device)
+    mr.evaluate_model(model=model,dataloader=samplers[cons.VALIDATION_FOLDER_NAME], device=device)
     #accuracy, roc_auc, pr_auc, f1, conf_matrix = metricas
     saving_the_model(args, model)
 
+# Esto lo hago así porque no se me ha ocurrido de otra forma
+def poner_nivel_a_todos_logggers():
+    lista_loggers = [ap.logger, mr.logger, logger]
+
+    for _logger in lista_loggers:
+        _logger.setLevel(cons.loggin_level)
+
 if __name__ == "__main__":
-    main(ap.get_dict_args())
+    args = ap.get_dict_args()
+    poner_nivel_a_todos_logggers()   
+    main(args)

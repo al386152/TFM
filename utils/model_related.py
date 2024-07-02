@@ -3,6 +3,9 @@ from .constants import NUM_GUIONES
 import numpy as np
 from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score, confusion_matrix
 import logging
+from .log_writer import getLogWritter
+
+logger = getLogWritter(__name__)
 
 def transfer_learning(model, capas_entrenar_final = -1):
 
