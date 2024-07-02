@@ -86,7 +86,7 @@ def load_data_loaders(args: dict, datasets:dict) -> dict:
 
 def train_model(args: dict, model, samplers, device):
     
-    logger.info( ('-' * cons.NUM_GUIONES) + "\nStarting to train the model\n" + ('-' * cons.NUM_GUIONES) )
+    logger.info( ('-' * cons.NUM_GUIONES) + "Starting to train the model" + ('-' * cons.NUM_GUIONES) )
 
     # Preparando las variables
 
