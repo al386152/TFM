@@ -11,9 +11,9 @@ pip install -r requirements.txt
 ### Aún no va
 Si tienes una versión de CUDA inferior o igual a 11.0 (es por si se utiliza en P2-c01):
 ```
-conda create -n proyecto python=3.8 -y
-conda activate proyecto
-pip install -r requirements_proyecto_P2c01.txt
+conda create -n proyecto_CUDA11 python=3.8 -y
+conda activate proyecto_CUDA11
+pip install -r requirements_proyecto_CUDA11.txt
 ```
 
 ## Ejemplos de uso:
