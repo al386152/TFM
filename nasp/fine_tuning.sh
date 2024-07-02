@@ -13,7 +13,7 @@ cd ..
 
 ruta_datasets="../Datasets"
 
-num_epochs=50
+num_epochs=1
 #layers_unfreeze=-1
 #name_dataset="Eyepacs_Aptos_Messidor"	#"MESSIDOR2"
 name_dataset="MESSIDOR2"
@@ -24,4 +24,8 @@ echo "name_dataset: $name_dataset"
 echo "batch_size: $batch_size"
 
 # --layers_unfreeze = -1 ==> funciona normal, si no, se congelan el número de capas desde el final menos las indicadas.
-srun time python3 ./main.py --batch_size $batch_size --epochs $num_epochs --device cuda  --data_path "$ruta_datasets/$name_dataset" --model_weights "./model_vgg19_5_outputs.pth"
+srun time python3 ./main.py --batch_size $batch_size \
+                            --epochs $num_epochs \
+                            --device cuda  \
+                            --data_path "$ruta_datasets/$name_dataset" \
+                            --model "resnet50"                        
