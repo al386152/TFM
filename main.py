@@ -7,6 +7,9 @@ import torch.utils
 import torch
 from torchvision import datasets, transforms
 
+from tqdm.contrib.logging import logging_redirect_tqdm
+from tqdm import tqdm
+
 import utils.arguments_parser as ap
 import utils.constants as cons
 import utils.model_related as mr
@@ -105,46 +108,47 @@ def train_model(args: dict, model, samplers, device):
         os.makedirs(partial_models_path)
 
     # Entrenando
-    for epoch in range(args[cons.NAME_EPOCS]):
+    #for epoch in range(args[cons.NAME_EPOCS]):
+    with logging_redirect_tqdm():
+        for epoch in tqdm(range(args[cons.NAME_EPOCS]), desc="Epoch"):
+        #logger.info(f"Epoch [{epoch + 1}/{args[cons.NAME_EPOCS]}]:")
 
-        logger.info(f"Epoch [{epoch + 1}]:")
+            model.train(True)
+            avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, 
+                                        training_loader=samplers[cons.TRAIN_FOLDER_NAME], 
+                                        loss_func=loss_fn, optimizer=optimizer)
+            running_val_loss = 0.0
 
-        model.train(True)
-        avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, 
-                                      training_loader=samplers[cons.TRAIN_FOLDER_NAME], 
-                                      loss_func=loss_fn, optimizer=optimizer)
-        running_val_loss = 0.0
+            model.eval()
+                
+            # Disable gradient computation and reduce memory consumption.
+            with torch.no_grad():
+                for i, vdata in enumerate(samplers[cons.VALIDATION_FOLDER_NAME]):                                
+                    vinputs, vlabels = vdata                
+                    voutputs = model(vinputs)                
+                    vloss = loss_fn(voutputs, vlabels)
+                    running_val_loss += vloss
 
-        model.eval()
-            
-        # Disable gradient computation and reduce memory consumption.
-        with torch.no_grad():
-            for i, vdata in enumerate(samplers[cons.VALIDATION_FOLDER_NAME]):                                
-                vinputs, vlabels = vdata                
-                voutputs = model(vinputs)                
-                vloss = loss_fn(voutputs, vlabels)
-                running_val_loss += vloss
+                    logger.debug("vinputs:\n", vinputs)
+                    logger.debug("vlabels:\n", vlabels)
+                    logger.debug("voutputs:\n", voutputs)
 
-                logger.debug("vinputs:\n", vinputs)
-                logger.debug("vlabels:\n", vlabels)
-                logger.debug("voutputs:\n", voutputs)
+        
+            avg_val_loss = running_val_loss / (i + 1)
+            logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
 
-    
-        avg_val_loss = running_val_loss / (i + 1)
-        logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
+            if avg_val_loss < best_vloss:
+                best_vloss = avg_val_loss
+                model_name = f"model_{epoch}_{timestamp}.pth"
+                model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
+                                        model_name) 
 
-        if avg_val_loss < best_vloss:
-            best_vloss = avg_val_loss
-            model_name = f"model_{epoch}_{timestamp}.pth"
-            model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
-                                      model_name) 
+                torch.save(model.state_dict(), model_path)
 
-            torch.save(model.state_dict(), model_path)
-
-        # Para el early stopping
-        if early_stopper.early_stop(running_val_loss):
-            logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
-            break        
+            # Para el early stopping
+            if early_stopper.early_stop(running_val_loss):
+                logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
+                break
     
     logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
     

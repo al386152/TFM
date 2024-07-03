@@ -2,6 +2,9 @@ import torch
 import numpy as np
 from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score, confusion_matrix
 
+from tqdm.contrib.logging import logging_redirect_tqdm
+from tqdm import tqdm
+
 from .log_writer import getLogWritter
 from .constants import NUM_GUIONES
 
@@ -76,32 +79,40 @@ def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.Cros
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
     running_loss= 0
     last_loss = 0
+    #len_training_loader = len(training_loader)
+    #print("len(training_loader): ", len_training_loader)
+    #print(f"{i}/{len_training_loader} ")
+    
+    #for i, data in enumerate(training_loader):
+    i = -1
+    with logging_redirect_tqdm():
+        for data in tqdm(training_loader, desc="Entrenamiento: "):
+            i += 1
+            # Every data instance is an input + label pair
+            inputs, labels = data
+            
 
-    for i, data in enumerate(training_loader):
-        # Every data instance is an input + label pair
-        inputs, labels = data
+            # Zero your gradients for every batch!
+            optimizer.zero_grad()
 
-        # Zero your gradients for every batch!
-        optimizer.zero_grad()
+            # Make predictions for this batch
+            outputs = model(inputs)
 
-        # Make predictions for this batch
-        outputs = model(inputs)
+            # Compute the loss and its gradients
+            loss = loss_func(outputs, labels)
+            loss.backward()
 
-        # Compute the loss and its gradients
-        loss = loss_func(outputs, labels)
-        loss.backward()
+            # Adjust learning weights
+            optimizer.step()
 
-        # Adjust learning weights
-        optimizer.step()
-
-        # Gather data and report
-        running_loss += loss.item()
-        if i % 1000 == 999:
-            last_loss = running_loss / 1000 # loss per batch
-            logger.info("  batch {} loss: {}".format(i + 1, last_loss))
-            tb_x = epoch_index * len(training_loader) + i + 1
-            logger.info("Loss/train", last_loss, tb_x)
-            running_loss = 0.
+            # Gather data and report
+            running_loss += loss.item()
+            if i % 1000 == 999:
+                last_loss = running_loss / 1000 # loss per batch
+                logger.info("  batch {} loss: {}".format(i + 1, last_loss))
+                tb_x = epoch_index * len(training_loader) + i + 1
+                logger.info("Loss/train", last_loss, tb_x)
+                running_loss = 0.
 
     return last_loss
 
