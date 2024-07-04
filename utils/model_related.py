@@ -10,35 +10,20 @@ from .constants import NUM_GUIONES
 
 logger = getLogWritter(__name__)
 
-def transfer_learning(model, capas_entrenar_final = -1):
+def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1):
 
     if capas_entrenar_final == -1:
         return model
     # else: congela las capas
 
-    logger.info(f"Preparando congelar todas las capas menos las {capas_entrenar_final} últimas para el transfer learning")    
-    # Esto es para congelar las capas
-    list_model_children = list()
+    _info = f"s {capas_entrenar_final} últimas" if capas_entrenar_final > 1 else " última"
+    logger.info(f"Preparando congelar todas las capas menos la {_info} para el transfer learning")
     
-    logger.debug("for block in model.blocks:")
-    for block in model.blocks:
-        print(block)
-        for child in block.children():
-            logger.debug(f"{child} |",end=' ')    
-            list_model_children.append(child)
-            logger.debug("len(list(child.parameters())): ", len(list(child.parameters())))            
-    logger.debug('-' * NUM_GUIONES)
-    
-    logger.debug("len(list_model_children): ", len(list_model_children))
-    if capas_entrenar_final != 0:
-        list_model_children = list_model_children[: -1 * capas_entrenar_final]
-    # else: list_model_children = list_model_children
-    logger.debug("len(list_model_children): ", len(list_model_children))    
+    capas_congelar = list(model.children())[: -1 * capas_entrenar_final] if capas_entrenar_final > 0 else model.children()
 
-    for child in list_model_children:
-        logger.debug(f"{child} |",end=' ')
+    for child in capas_congelar:
+        logger.debug(f"{child}")
         for param in child.parameters():
-            #print(f"{param} |\|",end=' ')
             param.requires_grad = False   
 
     # Nota: En algún punto, ya se añade una capa con las salidas esperadas.
@@ -46,31 +31,31 @@ def transfer_learning(model, capas_entrenar_final = -1):
 
     return model
 
-def fine_tuning(model, model_name, outputs, ):
+# https://github.com/munniomer/pytorch-tutorials/blob/master/beginner_source/finetuning_torchvision_models_tutorial.py
+def fine_tuning(model, model_name, outputs):
     
     logger.info("Adding finne tuning layers")                        
-
+    
     #if model_name == "vgg19":
     if "vgg" in model_name:
-        num_ftrs = model.classifier[6].in_features
-        logger.debug("model.classifier[6].in_features: ", model.classifier[6].out_features)            
-
-        model.classifier[6] = torch.nn.Sequential(
-                torch.nn.Linear(num_ftrs, outputs),
-                torch.nn.LayerNorm(outputs)
-            )
+        classifier_layer = model.classifier[6]        
     #elif model_name == "resnet50":
     elif "resnet" in model_name:
-        
-        num_ftrs = model.fc.in_features
-        logger.debug("model.fc.in_features: ", model.fc.in_features)
+        classifier_layer = model.fc
+    elif "densenet" in model_name:
+        classifier_layer = model.classifier
+    else: 
+        logger.warning(f"Han habido varias comprobaciones antes, ¿cómo has llegado aquí?. 'model_name: {model_name}'")
+        classifier_layer = None
 
-        model.fc = torch.nn.Sequential(
-                torch.nn.Linear(num_ftrs, outputs),
-                torch.nn.LayerNorm(outputs)
-            )
-    #else: otros casos 
 
+    num_ftrs = classifier_layer.in_features
+    logger.debug("num_ftrs: ", num_ftrs)            
+
+    model.classifier_layer = torch.nn.Sequential(
+            torch.nn.Linear(num_ftrs, outputs),
+            torch.nn.LayerNorm(outputs)
+        )
 
     return model
 

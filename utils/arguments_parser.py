@@ -53,8 +53,11 @@ def get_args_parser():
     parser.add_argument(f"--{cons.NAME_MODEL_WEIGHTS}", default=None, type=str,
                 help="Model's weights path")
     
-    parser.add_argument(f"--{cons.NAME_SHOW_DEBUG_OUTPUTS}", default=False, type=bool,
+    parser.add_argument(f"--{cons.NAME_SHOW_DEBUG_OUTPUTS}", action='store_true', default=False,
             help="Show the debug outputs")
+    
+    parser.add_argument(f"--{cons.NAME_NOT_FREEZE_LAYERS}", default=-1, type=int,
+            help="Number of the last layers to not freeze their learning. If -1: the model will work as normal.")
     
 
     return parser
@@ -67,7 +70,7 @@ def check_args(args:dict):
         argparse.ArgumentError(None, texto)
     
     if args[cons.NAME_SHOW_DEBUG_OUTPUTS]:
-        cons.loggin_level = logging._levelToName(logging.DEBUG)
+        cons.loggin_level = logging._levelToName[logging.DEBUG]
     #else: logging._levelToName(logging.INFO)
     
 def get_dict_args():    

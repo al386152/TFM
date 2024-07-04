@@ -17,15 +17,16 @@ from utils.common_operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TI
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
 
-def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -> torch.nn.Module:
+def load_model(args: dict, fine_tuning:bool = True) -> torch.nn.Module:
 
     model = None
     model_name = args[cons.NAME_MODEL]
     model_weights_path = args[cons.NAME_MODEL_WEIGHTS]
+    outputs = args[cons.NAME_NUMBER_CLASSES]
 
     logger.debug(f"model_weights_path: {model_weights_path}")
 
-    if model_weights_path is not None and os.path.isfile(model_weights_path):        
+    if model_weights_path and os.path.isfile(model_weights_path):        
         model_weights_path = model_weights_path
         weights = None
     else: 
@@ -36,21 +37,21 @@ def load_model(args: dict, fine_tuning:bool = True, capas_entrenar_final = -1) -
     model = cons.SWITCH_MODELOS[model_name](weights = weights)
 
     if fine_tuning: 
-        model = mr.fine_tuning(model=model, model_name=model_name, 
-                    outputs=args[cons.NAME_NUMBER_CLASSES])
+        model = mr.fine_tuning(model=model, model_name=model_name,outputs=outputs)
                 
     if model_weights_path:
         # Es importante cargarlo *DESPUES* del fine tuning
         model.load_state_dict(torch.load(model_weights_path))        
     
-    model = mr.transfer_learning(model, capas_entrenar_final)
+    model = mr.transfer_learning(model, args[cons.NAME_NOT_FREEZE_LAYERS])
         
     return model
+
 
 def load_datasets(args:dict) -> dict:
 
     transform = transforms.Compose([
-        # Aquí se puede añadir el aumento de datos, aunque prefiero que estén guardados en ficheros.
+        # TODO: MODIFICAR para hacer el aumento de datos aquí
         transforms.Resize((cons.HEIGHT_IMAGES, cons.WIDTH_IMAGES)),
         transforms.ToTensor()
     ])
@@ -227,4 +228,3 @@ if __name__ == "__main__":
     args = ap.get_dict_args()
     poner_nivel_a_todos_logggers()   
     main(args)
-    

@@ -1,4 +1,4 @@
-from torchvision.models import vgg19, resnet50, resnet152
+from torchvision.models import vgg19, resnet50, resnet152, densenet121, densenet169
 from logging import _levelToName, INFO
 
 # Nombres argumentos
@@ -18,6 +18,7 @@ NAME_MODEL = "model"
 PARTIAL_MODELS_PATH = "partial_models_path"
 NAME_MODEL_WEIGHTS = "model_weights"
 NAME_SHOW_DEBUG_OUTPUTS = "debug"
+NAME_NOT_FREEZE_LAYERS = "not_freeze"
 
 TEST_FOLDER_NAME = "test"
 VALIDATION_FOLDER_NAME = "val"
@@ -35,10 +36,13 @@ HEIGHT_IMAGES = 512
 
 NUM_GUIONES = 4
 
+# No me apetecía poner if-else para acabar haciendo lo mismo (además de que saco el listado de posibles modelos más facilmente)
 SWITCH_MODELOS = {
     "vgg19": vgg19,
     "resnet50": resnet50,
-    "resnet152": resnet152
+    "resnet152": resnet152,
+    "densenet121": densenet121,
+    "densenet169": densenet169
 }
 
 POSSIBLE_MODELS = SWITCH_MODELOS.keys()
