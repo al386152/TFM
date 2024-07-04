@@ -13,14 +13,14 @@ def getLogWritter(name, log_path = cons.DEFAULT_LOG_FOLDER,
     if not os.path.isdir(log_path):
         os.mkdir(log_path)
     
-    log_path = os.path.join(log_path, str(datetime.now().date()))
+    the_date = datetime.now()
+    log_path = os.path.join(log_path, str(the_date.date()))
+    log_name = f"{log_name}_{ str(the_date.time().replace(microsecond=0)).replace(':', '')}.log"
 
     if not os.path.isdir(log_path):
         os.mkdir(log_path)
     
     logging_level = logging._nameToLevel[logging_level]
-
-    
 
     logging.basicConfig(filename=os.path.join(log_path, log_name), 
                         level=logging_level, format=cons.LOG_OUTPUT_FORMAT)

@@ -7,9 +7,6 @@ import torch.utils
 import torch
 from torchvision import datasets, transforms
 
-from tqdm.contrib.logging import logging_redirect_tqdm
-from tqdm import tqdm
-
 import utils.arguments_parser as ap
 import utils.constants as cons
 import utils.model_related as mr
@@ -108,47 +105,45 @@ def train_model(args: dict, model, samplers, device):
         os.makedirs(partial_models_path)
 
     # Entrenando
-    #for epoch in range(args[cons.NAME_EPOCS]):
-    with logging_redirect_tqdm():
-        for epoch in tqdm(range(args[cons.NAME_EPOCS]), desc="Epoch"):
-        #logger.info(f"Epoch [{epoch + 1}/{args[cons.NAME_EPOCS]}]:")
+    for epoch in range(args[cons.NAME_EPOCS]):
+        logger.info(f"Epoch [{epoch + 1}/{args[cons.NAME_EPOCS]}]:")
 
-            model.train(True)
-            avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, 
-                                        training_loader=samplers[cons.TRAIN_FOLDER_NAME], 
-                                        loss_func=loss_fn, optimizer=optimizer)
-            running_val_loss = 0.0
+        model.train(True)
+        avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, 
+                                    training_loader=samplers[cons.TRAIN_FOLDER_NAME], 
+                                    loss_func=loss_fn, optimizer=optimizer)
+        running_val_loss = 0.0
 
-            model.eval()
-                
-            # Disable gradient computation and reduce memory consumption.
-            with torch.no_grad():
-                for i, vdata in enumerate(samplers[cons.VALIDATION_FOLDER_NAME]):                                
-                    vinputs, vlabels = vdata                
-                    voutputs = model(vinputs)                
-                    vloss = loss_fn(voutputs, vlabels)
-                    running_val_loss += vloss
+        model.eval()
+            
+        # Disable gradient computation and reduce memory consumption.
+        with torch.no_grad():
+            for i, vdata in enumerate(samplers[cons.VALIDATION_FOLDER_NAME]):                                
+                vinputs, vlabels = vdata                
+                voutputs = model(vinputs)                
+                vloss = loss_fn(voutputs, vlabels)
+                running_val_loss += vloss
 
-                    logger.debug("vinputs:\n", vinputs)
-                    logger.debug("vlabels:\n", vlabels)
-                    logger.debug("voutputs:\n", voutputs)
+                logger.debug("vinputs:\n", vinputs)
+                logger.debug("vlabels:\n", vlabels)
+                logger.debug("voutputs:\n", voutputs)
 
-        
-            avg_val_loss = running_val_loss / (i + 1)
-            logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
+    
+        avg_val_loss = running_val_loss / (i + 1)
+        logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
 
-            if avg_val_loss < best_vloss:
-                best_vloss = avg_val_loss
-                model_name = f"model_{epoch}_{timestamp}.pth"
-                model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
-                                        model_name) 
+        if avg_val_loss < best_vloss:
+            best_vloss = avg_val_loss
+            model_name = f"model_{epoch}_{timestamp}.pth"
+            model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
+                                    model_name) 
 
-                torch.save(model.state_dict(), model_path)
+            torch.save(model.state_dict(), model_path)
 
-            # Para el early stopping
-            if early_stopper.early_stop(running_val_loss):
-                logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
-                break
+        # Para el early stopping
+        if early_stopper.early_stop(running_val_loss):
+            logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
+            break
     
     logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
     
@@ -158,20 +153,9 @@ def saving_the_model(args: dict, model):
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
     torch.save(model.state_dict(),  model_name)
 
-def inference(args: dict, model, samplers):
-    model.eval()
-
-    
-def get_training_time_HMS_format(time_start, time_end):
-    intervalo = time_end - time_start
-
-    days, seconds = intervalo.days, intervalo.seconds
-
-    h = days * 24 + seconds // 3600
-    m = (seconds % 3600) // 60
-    s = (seconds % 60)
-
-    return f"{h:02}:{m:02}:{s:02}"
+def inference(args: dict, model, samplers, device):
+    #model.eval()
+    mr.evaluate_model(model=model,dataloader=samplers[cons.VALIDATION_FOLDER_NAME], device=device)
 
 def main(args: dict):
 
@@ -190,19 +174,11 @@ def main(args: dict):
     logger.info(f"Device: {device}")
 
     datasets = load_datasets(args)
-    
-    logger.debug(
-        "\n".join([f"len(dataset): {len(dataset)}\ndataset:\n{str(dataset)}" for dataset in datasets])
-    )
-
+    logger.debug("\n".join([f"len(dataset): {len(dataset)}\ndataset:\n{str(dataset)}" for dataset in datasets]))
     logger.debug(f"Datasets:\n{datasets}\n---")
-    samplers = load_data_loaders(args, datasets)
-    
-    logger.debug(
-        "\n".join([f"len(sampler): {len(sampler)}\nsampler:\n{str(sampler)}" for sampler in samplers])
-    )
 
-    
+    samplers = load_data_loaders(args, datasets)
+    logger.debug("\n".join([f"len(sampler): {len(sampler)}\nsampler:\n{str(sampler)}" for sampler in samplers]))
     logger.debug(f"Samplers:\n{samplers}\n---")
 
     model = load_model(args)
@@ -210,12 +186,12 @@ def main(args: dict):
     #save_model = train_model(args, model=model, samplers=samplers, device=device)
     t_inicio = datetime.now()
     train_model(args, model=model, samplers=samplers, device=device)
-    tiempo_entrenamiento = get_training_time_HMS_format(t_inicio, datetime.now())
+    tiempo_entrenamiento = cons.GET_TIME_HMS_FORMAT(t_inicio, datetime.now())
     logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
-        
-    mr.evaluate_model(model=model,dataloader=samplers[cons.VALIDATION_FOLDER_NAME], device=device)
-    #accuracy, roc_auc, pr_auc, f1, conf_matrix = metricas
+    
     saving_the_model(args, model)
+    mr.evaluate_model(model=model,dataloader=samplers[cons.VALIDATION_FOLDER_NAME], device=device)
+    #accuracy, roc_auc, pr_auc, f1, conf_matrix = metricas    
 
 # Esto lo hago así porque no se me ha ocurrido de otra forma
 def poner_nivel_a_todos_logggers():

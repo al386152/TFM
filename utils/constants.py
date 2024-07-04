@@ -25,10 +25,10 @@ TRAIN_FOLDER_NAME = "train"
 LIST_FOLDER_NAMES = [TEST_FOLDER_NAME, VALIDATION_FOLDER_NAME, TRAIN_FOLDER_NAME]
 
 DEFAULT_LOG_FOLDER = "logs"
-BASE_LOG_FILE_NAME = "output.log"
-MODEL_METRICS_LOG_FILE_NAME = "model_training.log"
+BASE_LOG_FILE_NAME = "output"
 
 LOG_OUTPUT_FORMAT = "[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s"
+LOG_BATCH_TRAINING_FORMAT = '\r' + LOG_OUTPUT_FORMAT
 
 WIDTH_IMAGES = 512
 HEIGHT_IMAGES = 512
@@ -51,3 +51,14 @@ loggin_level = _levelToName[INFO]
 def OUTPUT_MODEL_NAME(name, number_clases):
     return f"model_{name}_{number_clases}_outputs.pth"
 
+# No es una constante, pero sería una macro en C
+def GET_TIME_HMS_FORMAT(time_start, time_end):
+    intervalo = time_end - time_start
+
+    days, seconds = intervalo.days, intervalo.seconds
+
+    h = days * 24 + seconds // 3600
+    m = (seconds % 3600) // 60
+    s = (seconds % 60)
+
+    return f"{h:02}:{m:02}:{s:02}"

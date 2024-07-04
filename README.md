@@ -18,7 +18,7 @@ pip install -r requirements_proyecto_CUDA11.txt
 
 ## Ejemplos de uso:
 ```
-python3 ./main.py --batch_size 16 --epochs 1 --device cpu  --data_path "/home/usuario/Documentos/Retinopatía Diabética/Datasets/MESSIDOR2" --model "resnet152" --num_classes 5
+python3 ./main.py --batch_size 16 --epochs 1 --device cpu  --data_path "/home/usuario/Documentos/Retinopatía Diabética/Datasets/MESSIDOR2" --model "resnet152" --num_classes 5 --model_weights "./partial_models/model_0_20240703_101219.pth" --eval
 ```
 
 ```
