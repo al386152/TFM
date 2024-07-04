@@ -14,7 +14,7 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1):
 
     if capas_entrenar_final == -1:
         return model
-    # else: congela las capas
+    # else: se congelan las capas ==>
 
     _info = f"s {capas_entrenar_final} últimas" if capas_entrenar_final > 1 else " última"
     logger.info(f"Preparando congelar todas las capas menos la {_info} para el transfer learning")
@@ -26,7 +26,6 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1):
         for param in child.parameters():
             param.requires_grad = False   
 
-    # Nota: En algún punto, ya se añade una capa con las salidas esperadas.
     logger.info(f"{'-'*4} Fin función transfer learning {'-'*4}")
 
     return model
@@ -48,13 +47,12 @@ def fine_tuning(model, model_name, outputs):
         logger.warning(f"Han habido varias comprobaciones antes, ¿cómo has llegado aquí?. 'model_name: {model_name}'")
         classifier_layer = None
 
-
     num_ftrs = classifier_layer.in_features
     logger.debug("num_ftrs: ", num_ftrs)            
 
     model.classifier_layer = torch.nn.Sequential(
             torch.nn.Linear(num_ftrs, outputs),
-            torch.nn.LayerNorm(outputs)
+            #torch.nn.LayerNorm(outputs)
         )
 
     return model
