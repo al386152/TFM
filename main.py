@@ -12,6 +12,7 @@ import utils.constants as cons
 from utils.common_operations import OUTPUT_MODEL_NAME, GET_TIME_HMS_FORMAT
 import utils.model_related as mr
 from utils.log_writer import getLogWritter
+from utils.common_operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
 
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
@@ -106,8 +107,15 @@ def train_model(args: dict, model, samplers, device):
         os.makedirs(partial_models_path)
 
     # Entrenando
-    for epoch in range(args[cons.NAME_EPOCS]):
-        logger.info(f"Epoch [{epoch + 1}/{args[cons.NAME_EPOCS]}]:")
+    tiempos = list()
+    estimacion_fin = "(Tiempo estimado por época)"
+    estimacion_fin_todos = "(Tiempo estimado total restante)"
+    num_epochs = args[cons.NAME_EPOCS]
+
+    for epoch in range(num_epochs):
+        tiempo_inicio = datetime.now()
+        info_print = f"Epoch: [{epoch}/{num_epochs}] - {estimacion_fin} || {estimacion_fin_todos}"
+        logger.info(info_print)
 
         model.train(True)
         avg_loss = mr.train_one_epoch(model=model, epoch_index=epoch, 
@@ -145,6 +153,20 @@ def train_model(args: dict, model, samplers, device):
         if early_stopper.early_stop(running_val_loss):
             logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
             break
+
+        logger.debug("tiempo_inicio: ", tiempo_inicio)
+        ahora = datetime.now()
+        #tiempos.append(datetime.now() - tiempo_inicio)
+        logger.debug("ahora: ", ahora)
+        tiempos.append(ahora - tiempo_inicio)
+        #_estimacion_fin = sum(tiempos)/len(tiempos)
+        _estimacion_fin = MEAN_TIMES(tiempos)
+        logger.debug("_estimacion_fin: ", _estimacion_fin)
+
+        _estimacion_fin_todos = MULTIPLY_TIME(_estimacion_fin, (num_epochs - i) )
+        logger.debug("_estimacion_fin_todos: ", _estimacion_fin_todos)
+        estimacion_fin = GET_TIME_HMS_FORMAT(_estimacion_fin)
+        estimacion_fin_todos = GET_TIME_HMS_FORMAT(_estimacion_fin_todos)
     
     logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
     
@@ -205,3 +227,4 @@ if __name__ == "__main__":
     args = ap.get_dict_args()
     poner_nivel_a_todos_logggers()   
     main(args)
+    

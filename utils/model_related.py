@@ -83,7 +83,7 @@ def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.Cros
     
     tiempos = list()
     estimacion_fin = "(Tiempo estimado por lote)"
-    estimacion_fin_todos = "(Tiempo estimado total)"
+    estimacion_fin_todos = "(Tiempo estimado total restante)"
     
     for i, data in enumerate(training_loader):
         tiempo_inicio = datetime.now()
@@ -124,7 +124,7 @@ def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.Cros
         _estimacion_fin = MEAN_TIMES(tiempos)
         logger.debug("_estimacion_fin: ", _estimacion_fin)
 
-        _estimacion_fin_todos = MULTIPLY_TIME(_estimacion_fin, size_batches)
+        _estimacion_fin_todos = MULTIPLY_TIME(_estimacion_fin, (size_batches - i) )
         logger.debug("_estimacion_fin_todos: ", _estimacion_fin_todos)
         estimacion_fin = GET_TIME_HMS_FORMAT(_estimacion_fin)
         estimacion_fin_todos = GET_TIME_HMS_FORMAT(_estimacion_fin_todos)
