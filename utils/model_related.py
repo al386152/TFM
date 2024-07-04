@@ -82,8 +82,8 @@ def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.Cros
     size_batches = len(training_loader)    
     
     tiempos = list()
-    estimacion_fin = "(Estimación por lote)"
-    estimacion_fin_todos = "(Estimación total)"
+    estimacion_fin = "(Tiempo estimado por lote)"
+    estimacion_fin_todos = "(Tiempo estimado total)"
     
     for i, data in enumerate(training_loader):
         tiempo_inicio = datetime.now()
