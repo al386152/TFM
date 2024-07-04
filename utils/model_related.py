@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score, confusion_matrix
 
 from datetime import datetime
-from .constants import LOG_BATCH_TRAINING_FORMAT, GET_TIME_HMS_FORMAT
+from .common_operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
 
 from .log_writer import getLogWritter
 from .constants import NUM_GUIONES
@@ -80,23 +80,15 @@ def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.Cros
     running_loss= 0
     last_loss = 0
     size_batches = len(training_loader)    
-        
-    # Esto es para hacer que lo de "Batch salga en una línea"
-    list_handler_terminators_formatters = [(handler.terminator, handler.formatter) for handler in logger.handlers]
-    print("==> len(list_handler_terminators_formatters): ", len(list_handler_terminators_formatters))
-    for handler in logger.handlers:
-        handler.terminator = ""
-        handler.setFormatter(LOG_BATCH_TRAINING_FORMAT)
     
     tiempos = list()
-    estimacion_fin = 0.0
-    estimacion_fin_todos = 0.0    
+    estimacion_fin = "(Estimación por lote)"
+    estimacion_fin_todos = "(Estimación total)"
     
     for i, data in enumerate(training_loader):
         tiempo_inicio = datetime.now()
         info_print = f"Batch: [{i}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
-        logger.info(f"\r{info_print}")
-        logger.debug(f"{info_print}\n")
+        logger.info(f"{info_print}")
         # Every data instance is an input + label pair
         inputs, labels = data        
 
@@ -121,19 +113,21 @@ def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.Cros
             tb_x = epoch_index * len(training_loader) + i + 1
             info_loss_train=f"Loss/train: {last_loss}/{tb_x}"
             running_loss = 0.
-            logger.info(f"\rBatch: [{i}/{size_batches}] {info_batch_loss}\n{info_loss_train} - {estimacion_fin} || {estimacion_fin_todos}")
-            logger.debug(f"Batch: [{i}/{size_batches}] {info_batch_loss}\n{info_loss_train} - {estimacion_fin} || {estimacion_fin_todos}\n")
-                 
-        tiempos.append(GET_TIME_HMS_FORMAT(tiempo_inicio, datetime.now()))
-        #estimacion_fin = sum(tiempos)/len(tiempos)
-        estimacion_fin = sum(tiempos)/(i + 1)
-        estimacion_fin_todos = estimacion_fin * size_batches
+            logger.info(f"Batch: [{i}/{size_batches}] {info_batch_loss}\n{info_loss_train} - {estimacion_fin} || {estimacion_fin_todos}")
+        
+        logger.debug("tiempo_inicio: ", tiempo_inicio)
+        ahora = datetime.now()
+        #tiempos.append(datetime.now() - tiempo_inicio)
+        logger.debug("ahora: ", ahora)
+        tiempos.append(ahora - tiempo_inicio)
+        #_estimacion_fin = sum(tiempos)/len(tiempos)
+        _estimacion_fin = MEAN_TIMES(tiempos)
+        logger.debug("_estimacion_fin: ", _estimacion_fin)
 
-    # Esto es para que el log vuelva a ser como antes:
-    for i in range(logger.handlers):
-        terminator, formatter = list_handler_terminators_formatters[i]
-        logger.handlers[i].terminator = terminator
-        logger.handlers[i].setFormatter(formatter)
+        _estimacion_fin_todos = MULTIPLY_TIME(_estimacion_fin, size_batches)
+        logger.debug("_estimacion_fin_todos: ", _estimacion_fin_todos)
+        estimacion_fin = GET_TIME_HMS_FORMAT(_estimacion_fin)
+        estimacion_fin_todos = GET_TIME_HMS_FORMAT(_estimacion_fin_todos)
 
     return last_loss
 

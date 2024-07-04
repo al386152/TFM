@@ -9,6 +9,7 @@ from torchvision import datasets, transforms
 
 import utils.arguments_parser as ap
 import utils.constants as cons
+from utils.common_operations import OUTPUT_MODEL_NAME, GET_TIME_HMS_FORMAT
 import utils.model_related as mr
 from utils.log_writer import getLogWritter
 
@@ -149,7 +150,7 @@ def train_model(args: dict, model, samplers, device):
     
 
 def saving_the_model(args: dict, model):
-    model_name = cons.OUTPUT_MODEL_NAME(name=args[cons.NAME_MODEL], number_clases=args[cons.NAME_NUMBER_CLASSES])
+    model_name = OUTPUT_MODEL_NAME(name=args[cons.NAME_MODEL], number_clases=args[cons.NAME_NUMBER_CLASSES])
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
     torch.save(model.state_dict(),  model_name)
 
@@ -186,7 +187,7 @@ def main(args: dict):
     #save_model = train_model(args, model=model, samplers=samplers, device=device)
     t_inicio = datetime.now()
     train_model(args, model=model, samplers=samplers, device=device)
-    tiempo_entrenamiento = cons.GET_TIME_HMS_FORMAT(t_inicio, datetime.now())
+    tiempo_entrenamiento = GET_TIME_HMS_FORMAT((datetime.now() - t_inicio))
     logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
     
     saving_the_model(args, model)

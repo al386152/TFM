@@ -47,18 +47,4 @@ DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]
 
-#Esto es lo más similar a una macro de C
-def OUTPUT_MODEL_NAME(name, number_clases):
-    return f"model_{name}_{number_clases}_outputs.pth"
-
-# No es una constante, pero sería una macro en C
-def GET_TIME_HMS_FORMAT(time_start, time_end):
-    intervalo = time_end - time_start
-
-    days, seconds = intervalo.days, intervalo.seconds
-
-    h = days * 24 + seconds // 3600
-    m = (seconds % 3600) // 60
-    s = (seconds % 60)
-
-    return f"{h:02}:{m:02}:{s:02}"
+    
