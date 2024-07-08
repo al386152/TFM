@@ -52,16 +52,31 @@ def load_datasets(args:dict) -> dict:
 
     transform = transforms.Compose([
         # TODO: MODIFICAR para hacer el aumento de datos aquí
-        transforms.Resize((cons.HEIGHT_IMAGES, cons.WIDTH_IMAGES)),
+        transforms.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
         transforms.ToTensor()
     ])
 
-    return {
-        folder_name:
-        datasets.ImageFolder(root = os.path.join(args[cons.NAME_DATA_PATH], folder_name),
-                             transform = transform) 
-        for folder_name in cons.LIST_FOLDER_NAMES
-    }
+    if args[cons.SHOW_DEBUG_OUTPUTS]:
+        logger.debug("load_datasets")
+        dict_datasets = dict()
+
+        for folder_name in cons.LIST_FOLDER_NAMES:
+            logger.debug(f"folder name: {folder_name}. Data path: {args[cons.DATA_PATH]}.")
+            path = os.path.join(args[cons.DATA_PATH], folder_name)            
+            logger.debug(f"path: {path}")
+            dict_datasets[folder_name] = datasets.ImageFolder(path, transform = transform)             
+
+        for data_set in dict_datasets:
+            logger.debug(f"{data_set}:\n\t{dict_datasets[data_set]}")
+
+        return dict_datasets
+    else:
+        return {
+            folder_name:
+            datasets.ImageFolder(root = os.path.join(args[cons.DATA_PATH], folder_name),
+                                transform = transform) 
+            for folder_name in cons.LIST_FOLDER_NAMES
+        }    
 
 def load_samplers(datasets: Tuple)-> dict:
 
@@ -217,7 +232,7 @@ def main(args: dict):
     mr.evaluate_model(model=model,dataloader=samplers[cons.VALIDATION_FOLDER_NAME], device=device)
     #accuracy, roc_auc, pr_auc, f1, conf_matrix = metricas    
 
-# Esto lo hago así porque no se me ha ocurrido de otra forma
+# Esto lo hago así porque no se me ha ocurrido de otra forma de poner el nivel correcto a todos los loggers de todos los scripts
 def poner_nivel_a_todos_loggers():
     lista_loggers = [ap.logger, mr.logger, logger]
 

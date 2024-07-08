@@ -4,14 +4,14 @@ from logging import _levelToName, INFO
 # Nombres argumentos
 BATCH_SIZE = "batch_size"
 EPOCS = "epochs"
+INPUT_SIZE = "input_size"
 # TODO: Utilizar los siguientes parámetros :)
-INPUT_SIZE = "input_size"   
 DROP_PATH = "drop_path"
 WEIGTH_DECAY = "weight_decay"
 LEARNING_RATE = "lr"
 BASE_LEARNING_RATE = "blr"
 WARMUP_EPOCHS = "warmup_epochs"
-NAME_DATA_PATH = "data_path"
+DATA_PATH = "data_path"
 NUMBER_CLASSES = "num_classes"
 OUTPUT_DIR = "output_dir"
 DEVICE = "device"
@@ -32,8 +32,10 @@ BASE_LOG_FILE_NAME = "output"
 LOG_OUTPUT_FORMAT = "[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s"
 LOG_BATCH_TRAINING_FORMAT = '\r' + LOG_OUTPUT_FORMAT
 
-WIDTH_IMAGES = 512
-HEIGHT_IMAGES = 512
+SEPARADOR_INPUT_IMAGENES = 'x'
+
+ANCHURA_IMG = "anchura"
+ALTURA_IMG = "altura"
 
 NUM_GUIONES = 4
 

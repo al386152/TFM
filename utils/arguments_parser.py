@@ -15,8 +15,11 @@ def get_args_parser():
     
     parser.add_argument(f"--{cons.EPOCS}", default=50, type=int)
 
-    parser.add_argument(f"--{cons.INPUT_SIZE}", default=224, type=int,
-                    help="images input size")
+    parser.add_argument(f"--{cons.INPUT_SIZE}", default='224', type=str,
+                    help=f"Usos:\n\t-Un solo número: imagen cuadrada.\n\tDos números separados por \'{cons.SEPARADOR_INPUT_IMAGENES}\': [altura de la imagen]{cons.SEPARADOR_INPUT_IMAGENES}[anchura de la imagen]"+
+                         f"Ejemplos: 224 ==> Imagen cuadrada de 224x224. 512{cons.SEPARADOR_INPUT_IMAGENES}214: Imagen de 512 de altura y 214 de anchura"
+                            )
+                           
     
     parser.add_argument(f"--{cons.DROP_PATH}", type=float, default=0.1,
                         help="Drop path rate (default: 0.1)")
@@ -35,7 +38,7 @@ def get_args_parser():
     parser.add_argument(f"--{cons.NUMBER_CLASSES}", default=5, type=int,
                         help="number of the classification types")
 
-    parser.add_argument(f"--{cons.NAME_DATA_PATH}", default="../Datasets/MESSIDOR2", type=str,
+    parser.add_argument(f"--{cons.DATA_PATH}", default="../Datasets/MESSIDOR2", type=str,
                         help="dataset path")
     parser.add_argument(f"--{cons.OUTPUT_DIR}", default="./output_dir", type=str,
                         help="path where to save, empty for no saving")
@@ -64,14 +67,21 @@ def get_args_parser():
 
 def check_args(args:dict):
 
+    # Comprobamos el modelo
     if args[cons.MODEL] not in cons.POSSIBLE_MODELS:
         texto = f"{cons.MODEL}. Received: {args[cons.MODEL]}. Expected one of {str(cons.POSSIBLE_MODELS)}"
         logger.error(texto)
         argparse.ArgumentError(None, texto)
-    
+
+    # Comprobamos si mostrar las opciones de debug
     if args[cons.SHOW_DEBUG_OUTPUTS]:
         cons.loggin_level = logging._levelToName[logging.DEBUG]
     #else: logging._levelToName(logging.INFO)
+
+    # Ponemos
+    sizes = args[cons.INPUT_SIZE].split(cons.SEPARADOR_INPUT_IMAGENES)    
+    args[cons.ALTURA_IMG] = int(sizes[0])
+    args[cons.ANCHURA_IMG] = int(sizes[1] if len(sizes) > 1 else sizes[0])
     
 def get_dict_args():    
 
