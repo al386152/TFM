@@ -132,6 +132,13 @@ def update_metrics(list_metrics: list, outputs, labels):
     for metric in list_metrics:
         metric.update(outputs, labels)
 
+def get_metrics(list_metrics: list):
+    return [metric.compute().item() for metric in list_metrics]
+    
+def reset_list_metrics(list_metrics: list):
+    for metric in list_metrics:
+        metric.retes()
+
 def evaluate_model(model, dataloader, device, is_main_device, num_classes, task="multiclass"):
     model.eval()
 

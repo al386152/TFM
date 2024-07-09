@@ -182,7 +182,10 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                     logger.debug(f"voutputs:\n{str(voutputs)}" )
                 
                 mr.update_metrics(lista_metricas, outputs=voutputs, labels=vlabels)
-    
+
+        #mr.get_metrics()
+        mr.reset_list_metrics(lista_metricas)
+
         avg_val_loss = running_val_loss / (i + 1)
         if is_main_device:
             logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
