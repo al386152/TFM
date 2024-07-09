@@ -62,6 +62,8 @@ def get_args_parser():
     parser.add_argument(f"--{cons.NOT_FREEZE_LAYERS}", default=-1, type=int,
             help="Number of the last layers to not freeze their learning. If -1: the model will work as normal.")
     
+    parser.add_argument(f"--{cons.IS_DISTRIBUTED}", action='store_true', default=False,
+            help="True: the training is distributed. False: the training is only local.")
 
     return parser
 
@@ -106,3 +108,4 @@ if __name__ == "__main__":
 
     for k in dict_params:
         logger.debug(f"dict_params[{k}]: {dict_params[k]}")
+        

@@ -28,4 +28,3 @@ def MULTIPLY_TIME(time, alpha:float)->timedelta:
         return time * alpha
     else:
         return timedelta(seconds=datetime.timestamp(time) * alpha)
-    

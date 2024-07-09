@@ -20,6 +20,7 @@ PARTIAL_MODELS_PATH = "partial_models_path"
 MODEL_WEIGHTS = "model_weights"
 SHOW_DEBUG_OUTPUTS = "debug"
 NOT_FREEZE_LAYERS = "not_freeze"
+IS_DISTRIBUTED = "is_distributed"
 
 TEST_FOLDER_NAME = "test"
 VALIDATION_FOLDER_NAME = "val"
@@ -54,4 +55,5 @@ DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]
 
-    
+
+BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
