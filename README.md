@@ -6,6 +6,8 @@ Si tienes una versión de CUDA superior a 11.0:
 ```
 conda create -n proyecto python=3.8 -y
 conda activate proyecto
+conda install cudatoolkit=11.3 -c pytorch -y
+conda install numpy -y
 pip install -r requirements.txt
 ```
 ### Aún no va

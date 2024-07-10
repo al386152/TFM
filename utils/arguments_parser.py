@@ -1,8 +1,8 @@
 import argparse
 import logging
 
-from . import constants as cons
-from .log_writer import getLogWritter
+import utils.constants as cons
+from utils.log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
 
