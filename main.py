@@ -96,7 +96,7 @@ def load_samplers(args:dict, datasets: Tuple)-> dict:
     dict_samplers = {        
         #folder_name: torch.utils.data.SequentialSampler(folder_name)
         folder_name:
-            ( DistributedSampler(datasets[cons.TRAIN_FOLDER_NAME], shuffle=True) if args[cons.IS_DISTRIBUTED] else
+            ( DistributedSampler(datasets[cons.TRAIN_FOLDER_NAME], shuffle=True, num_replicas=os.environ["WORLD_SIZE"], rank=os.environ["LOCAL_RANK"]) if args[cons.IS_DISTRIBUTED] else
                 torch.utils.data.SequentialSampler(datasets[folder_name]) )
         for folder_name in cons.LIST_FOLDER_NAMES
     }
@@ -255,6 +255,8 @@ def setup_gpu(args:dict):
     
     if args[cons.IS_DISTRIBUTED]:
         cuda.set_device(device)
+        device = int(os.environ["LOCAL_RANK"])
+        worldsize = int(os.environ["WORLD_SIZE"])                
     else:
         device = torch.device(device)
 
@@ -269,6 +271,10 @@ def main(args: dict):
     if is_main_device:
         logger.info(f"Device: {device}")
 
+    model = load_model(args=args, device=device, is_main_device=is_main_device)
+    if is_main_device:
+        logger.info(f"Model: {model}")
+
     datasets = load_datasets(args, is_main_device)
     if is_main_device:
         logger.debug("\n".join([f"len(dataset): {len(dataset)}\ndataset:\n{dataset}" for dataset in datasets]))
@@ -279,11 +285,7 @@ def main(args: dict):
 
     metricas = mr.get_list_metrics(args[cons.NUMBER_CLASSES])
 
-    model = load_model(args=args, device=device, is_main_device=is_main_device)
     if is_main_device:
-        logger.info(f"Model: {model}")
-
-    # if is_main_device:
         t_inicio = datetime.now()
     train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, lista_metricas=metricas)
     if is_main_device:
