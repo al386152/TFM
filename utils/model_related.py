@@ -55,10 +55,18 @@ def fine_tuning(model, model_name, outputs, is_main_device):
     if is_main_device:
         logger.debug(f"num_ftrs: {str(num_ftrs)}")            
 
-    model.classifier_layer = torch.nn.Sequential(
-            torch.nn.Linear(num_ftrs, outputs),
-            #torch.nn.LayerNorm(outputs)
-        )
+    # Parece ser que así no se guarda bien, al revés, crea una capa más en vez de sustituir el clasificador
+    #model.classifier_layer = torch.nn.Sequential( torch.nn.Linear(num_ftrs, outputs), torch.nn.LayerNorm(outputs) )    
+    # model.classifier_layer = torch.nn.Linear(num_ftrs, outputs)
+
+    capa_clasificacion = torch.nn.Linear(num_ftrs, outputs)
+    if "vgg" in model_name:
+        model.classifier[6] = capa_clasificacion
+    elif "resnet" in model_name:
+        model.fc = capa_clasificacion
+    elif "densenet" in model_name:
+        model.classifier = capa_clasificacion
+    # else: No se debería dar el caso
 
     return model
 # -- Fin fine_tuning -- #
@@ -89,10 +97,10 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     lista_resultados = m.get_metrics()
     
     if is_main_device:
-
         for name, metric in lista_resultados:
             logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
-        
+
+    m.reset_list_metrics(lista_metricas) 
 
     return lista_resultados
 # -- Fin evaluate_model -- #
@@ -133,3 +141,5 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
         model = DistributedDataParallel(model, device_ids=[device])
 
     return model
+# -- Fin load_model -- #
+

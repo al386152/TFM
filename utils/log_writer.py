@@ -2,9 +2,16 @@ import os
 import sys
 import logging
 from datetime import datetime
+from typing import List
 
 from . import constants as cons
 
+def set_level(loggers: List[logging.Logger], level, copiar_a_stdout=True):
+    for logger in loggers:
+        logger.setLevel(level)        
+        for handler in logger.handlers:
+            handler.setLevel(level)
+            
 def getLogWritter(name, log_path = cons.DEFAULT_LOG_FOLDER, 
                 log_name = cons.BASE_LOG_FILE_NAME, 
                 logging_level=cons.loggin_level, 

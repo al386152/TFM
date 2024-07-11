@@ -13,7 +13,7 @@ from utils.operations import GET_TIME_HMS_FORMAT
 
 import utils.training as t
 import utils.model_related as mr
-from utils.log_writer import getLogWritter
+from utils.log_writer import getLogWritter, set_level
 from utils.metrics import  get_list_metrics, logger as metrics_logger
 from utils.data_loaders import load_datasets, load_data_loaders, logger as dl_logger
 
@@ -85,15 +85,16 @@ def main(args: dict):
     if is_main_device:
         mr.saving_the_model(args, model)
         mr.evaluate_model(model=model,dataloader=data_loaders[cons.VALIDATION_FOLDER_NAME], 
-                          device=device, is_main_device=is_main_device, num_classes=args[cons.NUMBER_CLASSES])
+                          device=device, is_main_device=is_main_device, lista_metricas=metricas)
 # -- Fin main -- #
 
 # Esto lo hago así porque no se me ha ocurrido de otra forma de poner el nivel correcto a todos los loggers de todos los scripts
 def poner_nivel_a_todos_loggers():
-    lista_loggers = [ap.logger, mr.logger, t.logger, metrics_logger, dl_logger, logger]
+    lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger]
 
-    for _logger in lista_loggers:
-        _logger.setLevel(cons.loggin_level)
+    #for _logger in lista_loggers:
+        #_logger.setLevel(cons.loggin_level)
+    set_level(lista_loggers, cons.loggin_level)
 # -- Fin poner_nivel_a_todos_loggers -- #
 
 if __name__ == "__main__":

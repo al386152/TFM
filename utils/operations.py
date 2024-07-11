@@ -28,3 +28,14 @@ def MULTIPLY_TIME(time, alpha:float)->timedelta:
         return time * alpha
     else:
         return timedelta(seconds=datetime.timestamp(time) * alpha)
+
+
+def validate_dataset(dataset, logger):
+    class_counts = {}
+    for _, label in dataset:
+        if label not in class_counts:
+            class_counts[label] = 0
+        class_counts[label] += 1
+
+    for class_idx, count in class_counts.items():
+        logger.info(f"Class {dataset.classes[class_idx]} ({class_idx}): {count} samples")

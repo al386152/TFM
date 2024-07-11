@@ -31,10 +31,9 @@ class EarlyStopper:
 # --  Fin class EarlyStopper -- #
 
 
-def train_one_epoch(model, epoch_index, training_loader, device, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True):
+def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True):
     
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
-    running_loss= 0
     last_loss = 0
     size_batches = len(training_loader)    
     
@@ -60,20 +59,10 @@ def train_one_epoch(model, epoch_index, training_loader, device, loss_func=torch
         outputs = model(inputs)
         loss = loss_func(outputs, labels)
         loss.backward()
-        optimizer.step()
-
-        # Mirar cómo cambiar esto del ejemplo:
-        running_loss += loss.item()
-        if i % 1000 == 999:
-            last_loss = running_loss / 1000 # loss per batch
-            info_batch_loss = f"  batch {i + 1} loss: {last_loss}"
-            tb_x = epoch_index * len(training_loader) + i + 1
-            info_loss_train=f"Loss/train: {last_loss}/{tb_x}"
-            running_loss = 0.
-            if is_main_device:
-                logger.info(f"Batch: [{i}/{size_batches}] {info_batch_loss}\n{info_loss_train} - {estimacion_fin} || {estimacion_fin_todos}")
+        optimizer.step()            
         
         if is_main_device:
+            logger.info(f"loss: {loss}")
             logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")
             ahora = datetime.now()
             #tiempos.append(datetime.now() - tiempo_inicio)
@@ -126,7 +115,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
             logger.info(info_print)
 
         model.train(True)
-        avg_loss = train_one_epoch(model=model, epoch_index=epoch, device=device,
+        avg_loss = train_one_epoch(model=model, device=device,
                                     training_loader=dataloaders[cons.TRAIN_FOLDER_NAME], 
                                     loss_func=loss_fn, optimizer=optimizer, is_main_device=is_main_device)
         running_val_loss = 0.0
@@ -159,12 +148,16 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                 
                 m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
-        #m.get_metrics()
+        lista_resultados = m.get_metrics()
         m.reset_list_metrics(lista_metricas)
 
         avg_val_loss = running_val_loss / (i + 1)
         if is_main_device:
             logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
+
+        if is_main_device:
+           for name, metric in lista_resultados:
+                logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
 
         if is_main_device and avg_val_loss < best_loss:
             best_loss = avg_val_loss

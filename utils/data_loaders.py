@@ -26,7 +26,7 @@ def load_datasets(args:dict, is_main_device) -> dict:
 
         for folder_name in cons.LIST_FOLDER_NAMES:
             if is_main_device:
-                logger.debug(f"folder name: {folder_name}. Data path: {args[cons.DATA_PATH]}.")
+                logger.debug(f"folder name: \"{folder_name}\". Data path: \"{args[cons.DATA_PATH]}\".")
             path = os.path.join(args[cons.DATA_PATH], folder_name)
             if is_main_device:
                 logger.debug(f"path: {path}")
