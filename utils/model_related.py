@@ -37,7 +37,7 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1, is_m
 # https://github.com/munniomer/pytorch-tutorials/blob/master/beginner_source/finetuning_torchvision_models_tutorial.py
 def fine_tuning(model, model_name, outputs, is_main_device):
     
-    logger.info("Adding finne tuning layers")                        
+    logger.info("Adding fine-tuning layers")                        
     
     #if model_name == "vgg19":
     if "vgg" in model_name:

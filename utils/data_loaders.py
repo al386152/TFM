@@ -35,6 +35,11 @@ def load_datasets(args:dict, is_main_device) -> dict:
         for data_set in dict_datasets:
             logger.debug(f"{data_set}:\n\t{dict_datasets[data_set]}")
 
+            for i in range(3):
+                img, label = dict_datasets[data_set][i]
+                logger.debug(f"Sample {i} from {folder_name} - img shape: {img.shape}, label: {label}, img min: {img.min()}, img max: {img.max()}")
+   
+
         return dict_datasets
     else:
         return {

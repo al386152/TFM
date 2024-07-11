@@ -31,7 +31,7 @@ class EarlyStopper:
 # --  Fin class EarlyStopper -- #
 
 
-def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True):
+def train_one_epoch(model, epoch_index, training_loader, device, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True):
     
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
     running_loss= 0
@@ -48,23 +48,21 @@ def train_one_epoch(model, epoch_index, training_loader, loss_func=torch.nn.Cros
             tiempo_inicio = datetime.now()
             info_print = f"Batch: [{i:02}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
             logger.info(f"{info_print}")
-        # Every data instance is an input + label pair
-        inputs, labels = data        
 
-        # Zero your gradients for every batch!
+        inputs, labels = data
+        inputs, labels = inputs.to(device), labels.to(device)
+        
+        if is_main_device:
+            logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
+            logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
+
         optimizer.zero_grad()
-
-        # Make predictions for this batch
         outputs = model(inputs)
-
-        # Compute the loss and its gradients
         loss = loss_func(outputs, labels)
         loss.backward()
-
-        # Adjust learning weights
         optimizer.step()
 
-        # Gather data and report
+        # Mirar cómo cambiar esto del ejemplo:
         running_loss += loss.item()
         if i % 1000 == 999:
             last_loss = running_loss / 1000 # loss per batch
@@ -99,7 +97,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         logger.info( ('-' * cons.NUM_GUIONES) + "Starting to train the model" + ('-' * cons.NUM_GUIONES) )
 
     # Preparando las variables
-    best_vloss = float('inf') # Número imposible para que en la primera iteración sea menor sí o sí.
+    best_loss = float('inf') # Número imposible para que en la primera iteración sea menor sí o sí.
     partial_models_path = args[cons.PARTIAL_MODELS_PATH] 
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -128,30 +126,38 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
             logger.info(info_print)
 
         model.train(True)
-        avg_loss = train_one_epoch(model=model, epoch_index=epoch, 
+        avg_loss = train_one_epoch(model=model, epoch_index=epoch, device=device,
                                     training_loader=dataloaders[cons.TRAIN_FOLDER_NAME], 
-                                    loss_func=loss_fn, optimizer=optimizer)
+                                    loss_func=loss_fn, optimizer=optimizer, is_main_device=is_main_device)
         running_val_loss = 0.0
 
         model.eval()
             
         # Disable gradient computation and reduce memory consumption.
         with torch.no_grad():
-            for i, vdata in enumerate(dataloaders[cons.VALIDATION_FOLDER_NAME]):                                
-                vinputs, vlabels = vdata
+            for i, data in enumerate(dataloaders[cons.VALIDATION_FOLDER_NAME]):                                
+                inputs, labels = data
 
-                vinputs, vlabels = vinputs.to(device), vlabels.to(device)
+                inputs, labels = inputs.to(device), labels.to(device)
 
-                voutputs = model(vinputs)                
-                vloss = loss_fn(voutputs, vlabels)
-                running_val_loss += vloss
+                if is_main_device:
+                    logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
+                    logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
+
+                outputs = model(inputs)                
+
+                if is_main_device:
+                    logger.debug(f"Validation Outputs shape: {outputs.shape}, Validation Labels shape: {labels.shape}")
+
+                loss = loss_fn(outputs, labels)
+                running_val_loss += loss
                 
                 if is_main_device:
-                    logger.debug(f"vinputs:\n{str(vinputs)}" )
-                    logger.debug(f"vlabels:\n{str(vlabels)}" )
-                    logger.debug(f"voutputs:\n{str(voutputs)}" )
+                    logger.debug(f"inputs:\n{str(inputs)}" )
+                    logger.debug(f"labels:\n{str(labels)}" )
+                    logger.debug(f"outputs:\n{str(outputs)}" )
                 
-                m.update_metrics(lista_metricas, outputs=voutputs, labels=vlabels)
+                m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
         #m.get_metrics()
         m.reset_list_metrics(lista_metricas)
@@ -160,8 +166,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         if is_main_device:
             logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
 
-        if is_main_device and avg_val_loss < best_vloss:
-            best_vloss = avg_val_loss
+        if is_main_device and avg_val_loss < best_loss:
+            best_loss = avg_val_loss
             model_name = f"model_{epoch}_{timestamp}.pth"
             model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
                                     model_name) 

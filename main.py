@@ -20,7 +20,7 @@ from utils.data_loaders import load_datasets, load_data_loaders, logger as dl_lo
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
 
-# TODO: Revisar esto, seguro que hay una forma mucho mejor de hacerlo.
+# TODO: Revisar esto (seguro que hay una forma mucho mejor de hacerlo) y mirar de moverlo a otra carpeta.
 def setup_gpu(args:dict):
 
     # Estableciendo el dispositivo en el que se va a trabajar.
