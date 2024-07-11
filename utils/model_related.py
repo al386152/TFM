@@ -78,10 +78,10 @@ def saving_the_model(args: dict, model):
 # -- Fin saving_the_model -- #
 
 # TODO: por completar.
-def inference(args: dict, model, dataloaders, device):
+def inference(args: dict, model, dataloaders, device, num_clases):
     #model.eval()    
     evaluate_model(model=model,dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], 
-                      device=device, lista_metricas=m.get_list_metrics_with_CM())
+                      device=device, lista_metricas=m.get_list_metrics_with_CM(num_clases, device))
 # -- Fin inference -- #
 
 def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list):

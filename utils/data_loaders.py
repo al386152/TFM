@@ -20,8 +20,17 @@ def load_datasets(args:dict, is_main_device) -> dict:
         transforms.ToTensor()
     ])
 
-    if args[cons.SHOW_DEBUG_OUTPUTS] and is_main_device:
-        logger.debug("load_datasets")
+    if not args[cons.SHOW_DEBUG_OUTPUTS]:
+        return {
+            folder_name:
+            datasets.ImageFolder(root = os.path.join(args[cons.DATA_PATH], folder_name),
+                                transform = transform) 
+            for folder_name in cons.LIST_FOLDER_NAMES
+        }    
+    else:
+        # La versión de debug:
+        if is_main_device:
+            logger.debug("load_datasets")
         dict_datasets = dict()
 
         for folder_name in cons.LIST_FOLDER_NAMES:
@@ -37,17 +46,10 @@ def load_datasets(args:dict, is_main_device) -> dict:
 
             for i in range(3):
                 img, label = dict_datasets[data_set][i]
-                logger.debug(f"Sample {i} from {folder_name} - img shape: {img.shape}, label: {label}, img min: {img.min()}, img max: {img.max()}")
+                logger.debug(f"Sample {i} from {data_set} - img shape: {img.shape}, label: {label}, img min: {img.min()}, img max: {img.max()}")
    
 
-        return dict_datasets
-    else:
-        return {
-            folder_name:
-            datasets.ImageFolder(root = os.path.join(args[cons.DATA_PATH], folder_name),
-                                transform = transform) 
-            for folder_name in cons.LIST_FOLDER_NAMES
-        }    
+        return dict_datasets        
 
 def load_samplers(args:dict, datasets: Tuple)-> dict:    
 
@@ -61,7 +63,7 @@ def load_samplers(args:dict, datasets: Tuple)-> dict:
     dict_samplers = {        
         #folder_name: torch.utils.data.SequentialSampler(folder_name)
         folder_name:
-            ( DistributedSampler(datasets[cons.TRAIN_FOLDER_NAME], shuffle=True, num_replicas=world_size, rank=rank) if args[cons.IS_DISTRIBUTED] else
+            ( DistributedSampler(datasets[folder_name], shuffle=True, num_replicas=world_size, rank=rank) if args[cons.IS_DISTRIBUTED] else
                 torch.utils.data.SequentialSampler(datasets[folder_name]) )
         for folder_name in cons.LIST_FOLDER_NAMES
     }

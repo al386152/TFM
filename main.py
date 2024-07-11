@@ -43,9 +43,9 @@ def setup_gpu(args:dict):
     #else: device = "cpu"
     
     if args[cons.IS_DISTRIBUTED]:
-        cuda.set_device(device)
         device = int(os.environ["LOCAL_RANK"])
-        worldsize = int(os.environ["WORLD_SIZE"])                
+        worldsize = int(os.environ["WORLD_SIZE"])    
+        cuda.set_device(device)            
     else:
         device = torch.device(device)
 
@@ -73,7 +73,7 @@ def main(args: dict):
     if is_main_device:
         logger.debug("\n".join([f"len(dataloader): {len(dataloader)}\dataloader:\n{dataloader}" for dataloader in data_loaders]))
 
-    metricas = get_list_metrics(args[cons.NUMBER_CLASSES])
+    metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
     if is_main_device:
         t_inicio = datetime.now()
