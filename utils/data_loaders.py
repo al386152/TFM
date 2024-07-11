@@ -51,10 +51,17 @@ def load_datasets(args:dict, is_main_device) -> dict:
 
 def load_samplers(args:dict, datasets: Tuple)-> dict:    
 
+    world_size = int(os.environ["WORLD_SIZE"])
+    rank = int(os.environ["LOCAL_RANK"])
+
+    if rank == 0:
+        logger.debug(f"world_size: {world_size} (type: {type(world_size)})")
+        logger.debug(f"rank: {rank} (type: {type(rank)})")
+
     dict_samplers = {        
         #folder_name: torch.utils.data.SequentialSampler(folder_name)
         folder_name:
-            ( DistributedSampler(datasets[cons.TRAIN_FOLDER_NAME], shuffle=True, num_replicas=os.environ["WORLD_SIZE"], rank=os.environ["LOCAL_RANK"]) if args[cons.IS_DISTRIBUTED] else
+            ( DistributedSampler(datasets[cons.TRAIN_FOLDER_NAME], shuffle=True, num_replicas=world_size, rank=rank) if args[cons.IS_DISTRIBUTED] else
                 torch.utils.data.SequentialSampler(datasets[folder_name]) )
         for folder_name in cons.LIST_FOLDER_NAMES
     }

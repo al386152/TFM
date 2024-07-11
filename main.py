@@ -35,8 +35,8 @@ def setup_gpu(args:dict):
             if args[cons.IS_DISTRIBUTED]:
                 logger.info("Setting up distributed gpu") # TODO: pensar en un mensaje mejor para el log
                 distributed.init_process_group(backend=cons.BACKEND)
-                device = int(os.environ["LOCAL_RANK"])
-                worldsize = int(os.environ["WORLD_SIZE"])                
+                #device = int(os.environ["LOCAL_RANK"])
+                #worldsize = int(os.environ["WORLD_SIZE"])                
             else:
                 logger.info("Setting one gpu") # TODO: pensar en un mensaje mejor para el log
                 device = args[cons.DEVICE]

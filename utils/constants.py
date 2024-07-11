@@ -52,8 +52,10 @@ SWITCH_MODELOS = {
 POSSIBLE_MODELS = SWITCH_MODELOS.keys()
 DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 
+BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
+
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]
 
 
-BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
+
