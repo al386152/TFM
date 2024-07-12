@@ -148,7 +148,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                 
                 m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
-        lista_resultados = m.get_metrics()
+        lista_resultados = m.get_metrics(lista_metricas)
         m.reset_list_metrics(lista_metricas)
 
         avg_val_loss = running_val_loss / (i + 1)
@@ -156,7 +156,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
             logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
 
         if is_main_device:
-           for name, metric in lista_resultados:
+            logger.debug(f"Resultados: {lista_resultados}")
+            for name, metric in lista_resultados:
                 logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
 
         if is_main_device and avg_val_loss < best_loss:

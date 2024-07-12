@@ -94,7 +94,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
 
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
     
-    lista_resultados = m.get_metrics()
+    lista_resultados = m.get_metrics(lista_metricas)
     
     if is_main_device:
         for name, metric in lista_resultados:

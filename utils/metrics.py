@@ -6,7 +6,7 @@ logger = getLogWritter(__name__)
 
 def _mover_a_dispositivo(lista_metricas, device):
 
-    for metrica in lista_metricas:
+    for _, metrica in lista_metricas:
         metrica.to(device)
 
 def get_list_metrics(num_classes:int, device, task="multiclass"):
@@ -40,7 +40,9 @@ def update_metrics(list_metrics: list, outputs, labels):
 # -- Fin update_metrics -- #        
 
 def get_metrics(list_metrics: list):
-    return [metric.compute().item() for _, metric in list_metrics]
+    resultados =  [(name, metric.compute().item()) for name, metric in list_metrics]
+    #logger.info(f"Resultados: {resultados}")
+    return resultados
 # -- Fin get_metrics -- #
     
 def reset_list_metrics(list_metrics: list):
