@@ -192,4 +192,3 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
 
 # -- Fin train_model -- #
-

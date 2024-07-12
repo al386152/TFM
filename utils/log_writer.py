@@ -42,5 +42,3 @@ def getLogWritter(name, log_path = cons.DEFAULT_LOG_FOLDER,
         logger.addHandler(handler)
     
     return logger
-    
-

@@ -56,6 +56,3 @@ BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, `
 
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]
-
-
-

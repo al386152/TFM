@@ -97,6 +97,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     lista_resultados = m.get_metrics(lista_metricas)
     
     if is_main_device:
+        logger.info(f"lista_resultados:\n{lista_resultados}")
         for name, metric in lista_resultados:
             logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
 
@@ -142,4 +143,3 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
 
     return model
 # -- Fin load_model -- #
-
