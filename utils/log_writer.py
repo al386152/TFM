@@ -22,7 +22,7 @@ def getLogWritter(name, log_path = cons.DEFAULT_LOG_FOLDER,
     
     the_date = datetime.now()
     log_path = os.path.join(log_path, str(the_date.date()))
-    log_name = f"{log_name}_{ str(the_date.time().replace(microsecond=0)).replace(':', '')}.log"
+    log_name = f"{str(the_date.time().replace(microsecond=0)).replace(':', '')}_{log_name}.log"
 
     if not os.path.isdir(log_path):
         os.mkdir(log_path)

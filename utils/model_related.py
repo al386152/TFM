@@ -92,40 +92,20 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     if is_main_device:
         # TODO: hacerlo un "debug"
         logger.info(f"evaluate_model - inicio")
-
-    if is_main_device:
-        tiempos = list()
-        estimacion_fin = "(Tiempo estimado por conjunto de validación)"
-        estimacion_fin_todos = "(Tiempo estimado total restante)"
-        num_elem = dataloader
     
+    num_elementos = len(dataloader)
+
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(dataloader):
 
             if is_main_device:
-                tiempo_inicio = datetime.now()
-                info_print = f"Val. Batch: [{i + 1}/{num_elem}] - {estimacion_fin} || {estimacion_fin_todos}"
+                info_print = f"Val. Batch: [{i + 1}/{num_elementos}]"
                 logger.info(info_print)
 
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
 
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
-
-            if is_main_device:
-                logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")
-                ahora = datetime.now()
-                #tiempos.append(datetime.now() - tiempo_inicio)
-                logger.debug(f"ahora: {str(ahora)}")
-                tiempos.append(ahora - tiempo_inicio)
-                #_estimacion_fin = sum(tiempos)/len(tiempos)
-                _estimacion_fin = MEAN_TIMES(tiempos)
-                logger.debug(f"_estimacion_fin: {str(_estimacion_fin)}")
-
-                _estimacion_fin_todos = MULTIPLY_TIME(_estimacion_fin, (size_batches - i) )
-                logger.debug(f"_estimacion_fin_todos: {str(_estimacion_fin_todos)}")
-                estimacion_fin = GET_TIME_HMS_FORMAT(_estimacion_fin)
-                estimacion_fin_todos = GET_TIME_HMS_FORMAT(_estimacion_fin_todos)
 
     if is_main_device:
         # TODO: hacerlo un "debug"
