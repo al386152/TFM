@@ -1,7 +1,10 @@
+import os
+
 from torchmetrics import Accuracy, AUROC, AveragePrecision, F1Score, ConfusionMatrix
 from datetime import datetime
 import matplotlib.pyplot as plt
 
+import utils.constants as cons
 from .log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
@@ -41,24 +44,40 @@ def update_metrics(list_metrics: list, outputs, labels):
         metric.update(outputs, labels)
 # -- Fin update_metrics -- #        
 
-def get_metrics(list_metrics: list, save_confusion_matrix = False, is_main_device=False):
+def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is_main_device=False):
 
     resultados = list()
     for i in range(len(list_metrics)):    
         name, metric = list_metrics[i]
-        logger.debug(f"get_metrics - name: {name}, metric: {metric}")
+        if is_main_device:
+            logger.debug(f"get_metrics - name: {name}, metric: {metric}")
 
         if name == "ConfusionMatrix":
-            logger.debug(f"Confusion Matrix")
+            
+            if is_main_device:
+                logger.debug(f"Confusion Matrix")
+
             if save_confusion_matrix:
-                logger.debug(f"Saving confusion matrix")
-                metric.plot(cmap=plt.cm.Blues)
-                name_file = f"{str(datetime.now().time().replace(microsecond=0)).replace(':', '')}_confusion_matrix.jpg"
+                
+                if is_main_device: 
+                    logger.debug(f"Saving confusion matrix")
+                
+                metric.plot(cmap=plt.cm.Blues)                
+                tiempo = str(datetime.now().replace(microsecond=0)).replace(':', '')
+
+                if not os.path.isdir(cons.CONFUSION_MATRIX_FOLDER_NAME) and is_main_device:
+                    os.mkdir(cons.CONFUSION_MATRIX_FOLDER_NAME)
+
+                name_file = f"{tiempo}_{args[cons.MODEL]}_confusion_matrix{cons.CONFUSION_MATRIX_FILE_FORMAT}"
+                name_file = os.path.join(cons.CONFUSION_MATRIX_FOLDER_NAME, name_file)
                 plt.savefig(name_file, dpi=600, bbox_inches ='tight')
             else:
                 resultados.append((name, metric.compute()))
         else:
-            logger.debug(f"Other metric")
+            
+            if is_main_device:
+                logger.debug(f"Other metric")
+
             resultados.append((name, metric.compute().item()))
     #logger.info(f"Resultados: {resultados}")
     return resultados

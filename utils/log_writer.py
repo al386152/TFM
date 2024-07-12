@@ -6,7 +6,7 @@ from typing import List
 
 from . import constants as cons
 
-def set_level(loggers: List[logging.Logger], level, copiar_a_stdout=True):
+def set_level(loggers: List[logging.Logger], level):
     for logger in loggers:
         logger.setLevel(level)        
         for handler in logger.handlers:
@@ -17,15 +17,13 @@ def getLogWritter(name, log_path = cons.DEFAULT_LOG_FOLDER,
                 logging_level=cons.loggin_level, 
                 copiar_a_stdout = True)->logging.Logger:   
 
-    if not os.path.isdir(log_path):
+    # TODO: mirar si mover esto a alguna otra parte.
+    if not os.path.isdir(log_path) and (int(os.environ["LOCAL_RANK"]) == 0):
         os.mkdir(log_path)
     
     the_date = datetime.now()
     log_path = os.path.join(log_path, str(the_date.date()))
-    log_name = f"{str(the_date.time().replace(microsecond=0)).replace(':', '')}_{log_name}.log"
-
-    if not os.path.isdir(log_path):
-        os.mkdir(log_path)
+    log_name = f"{str(the_date.time().replace(microsecond=0)).replace(':', '-')}_{log_name}.log"
     
     logging_level = logging._nameToLevel[logging_level]
 

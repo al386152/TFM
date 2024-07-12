@@ -83,10 +83,11 @@ def saving_the_model(args: dict, model):
 def inference(args: dict, model, dataloaders, device, num_clases):
     #model.eval()    
     evaluate_model(model=model,dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], 
-                      device=device, lista_metricas=m.get_list_metrics_with_CM(num_clases, device))
+                      device=device, args=args,
+                      lista_metricas=m.get_list_metrics_with_CM(num_clases, device))
 # -- Fin inference -- #
 
-def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list):
+def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args):
     model.eval()
 
     if is_main_device:
@@ -110,15 +111,13 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     if is_main_device:
         # TODO: hacerlo un "debug"
         logger.info(f"evaluate_model - get metrics")
-    lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix=True, is_main_device=is_main_device)
+    lista_resultados = m.get_metrics(lista_metricas, args=args, save_confusion_matrix=True, is_main_device=is_main_device)
     m.reset_list_metrics(lista_metricas)
     
     if is_main_device:
         logger.info(f"lista_resultados:\n{lista_resultados}")
         for name, metric in lista_resultados:
             logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
-
-     
 
     return lista_resultados
 # -- Fin evaluate_model -- #

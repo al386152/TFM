@@ -96,8 +96,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     
     # Creando carpetas para las salidas  
-    if not os.path.isdir(partial_models_path):
-        os.makedirs(partial_models_path)
+    if not os.path.isdir(partial_models_path) and is_main_device:
+        os.mkdir(partial_models_path)
 
     # Entrenando
     if is_main_device:
@@ -148,7 +148,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                 
                 m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
-        lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix= (epoch == num_epochs-1), is_main_device=is_main_device)
+        lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix= (epoch == num_epochs-1), is_main_device=is_main_device, args=args)
         m.reset_list_metrics(lista_metricas)
 
         avg_val_loss = running_val_loss / (i + 1)

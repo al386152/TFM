@@ -38,6 +38,9 @@ SEPARADOR_INPUT_IMAGENES = 'x'
 ANCHURA_IMG = "anchura"
 ALTURA_IMG = "altura"
 
+CONFUSION_MATRIX_FOLDER_NAME = "confusion_matrix"
+CONFUSION_MATRIX_FILE_FORMAT = ".png"
+
 NUM_GUIONES = 4
 
 # No me apetecía poner if-else para acabar haciendo lo mismo (además de que saco el listado de posibles modelos más facilmente)
