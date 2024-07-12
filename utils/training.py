@@ -45,7 +45,7 @@ def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntr
     for i, data in enumerate(training_loader):
         if is_main_device:
             tiempo_inicio = datetime.now()
-            info_print = f"Batch: [{i + 1:02}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
+            info_print = f"Batch: [{i + 1}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
             logger.info(f"{info_print}")
 
         inputs, labels = data
@@ -148,7 +148,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                 
                 m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
-        lista_resultados = m.get_metrics(lista_metricas)
+        lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix= (epoch == num_epochs-1), is_main_device=is_main_device)
         m.reset_list_metrics(lista_metricas)
 
         avg_val_loss = running_val_loss / (i + 1)

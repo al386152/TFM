@@ -41,17 +41,24 @@ def update_metrics(list_metrics: list, outputs, labels):
         metric.update(outputs, labels)
 # -- Fin update_metrics -- #        
 
-def get_metrics(list_metrics: list):
+def get_metrics(list_metrics: list, save_confusion_matrix = False, is_main_device=False):
 
     resultados = list()
-    for i in range(len(list_metrics)):
+    for i in range(len(list_metrics)):    
         name, metric = list_metrics[i]
+        logger.debug(f"get_metrics - name: {name}, metric: {metric}")
+
         if name == "ConfusionMatrix":
-            metric.plot(cmap=plt.cm.Blues,normalized=True,plot_lib="matplotlib")
-            name = "confusion_matrix.jpg"
-            name_file = f"{str(datetime.now().time().replace(microsecond=0)).replace(':', '')}_{name}.log"
-            plt.savefig(name_file, dpi=600, bbox_inches ='tight')            
+            logger.debug(f"Confusion Matrix")
+            if save_confusion_matrix:
+                logger.debug(f"Saving confusion matrix")
+                metric.plot(cmap=plt.cm.Blues)
+                name_file = f"{str(datetime.now().time().replace(microsecond=0)).replace(':', '')}_confusion_matrix.jpg"
+                plt.savefig(name_file, dpi=600, bbox_inches ='tight')
+            else:
+                resultados.append((name, metric.compute()))
         else:
+            logger.debug(f"Other metric")
             resultados.append((name, metric.compute().item()))
     #logger.info(f"Resultados: {resultados}")
     return resultados

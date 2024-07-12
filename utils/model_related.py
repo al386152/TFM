@@ -110,14 +110,15 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     if is_main_device:
         # TODO: hacerlo un "debug"
         logger.info(f"evaluate_model - get metrics")
-    lista_resultados = m.get_metrics(lista_metricas)
+    lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix=True, is_main_device=is_main_device)
+    m.reset_list_metrics(lista_metricas)
     
     if is_main_device:
         logger.info(f"lista_resultados:\n{lista_resultados}")
         for name, metric in lista_resultados:
             logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
 
-    m.reset_list_metrics(lista_metricas) 
+     
 
     return lista_resultados
 # -- Fin evaluate_model -- #

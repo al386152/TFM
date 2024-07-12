@@ -73,7 +73,8 @@ def main(args: dict):
     if is_main_device:
         logger.debug("\n".join([f"len(dataloader): {len(dataloader)}\dataloader:\n{dataloader}" for dataloader in data_loaders]))
 
-    metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
+    #metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
+    metricas = get_list_metrics_with_CM(args[cons.NUMBER_CLASSES], device=device)
 
     if is_main_device:
         t_inicio = datetime.now()
@@ -83,10 +84,10 @@ def main(args: dict):
         logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")            
     
     if is_main_device:        
-        mr.evaluate_model(model=model,dataloader=data_loaders[cons.VALIDATION_FOLDER_NAME], 
-                          device=device, is_main_device=is_main_device, 
-                          #lista_metricas=get_list_metrics_with_CM(args[cons.NUMBER_CLASSES], device=device))
-                          lista_metricas=get_list_metrics(args[cons.NUMBER_CLASSES], device=device))
+        #mr.evaluate_model(model=model,dataloader=data_loaders[cons.VALIDATION_FOLDER_NAME], 
+        #                  device=device, is_main_device=is_main_device, 
+        #                  lista_metricas=get_list_metrics_with_CM(args[cons.NUMBER_CLASSES], device=device))
+        #                  #lista_metricas=get_list_metrics(args[cons.NUMBER_CLASSES], device=device))
         
         mr.saving_the_model(args, model)
         logger.info(f"{'-' * cons.NUM_GUIONES} Programa finalizado {'-' * cons.NUM_GUIONES}")
