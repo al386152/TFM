@@ -22,20 +22,18 @@ def get_args_parser():
                          f"Ejemplos: 224 ==> Imagen cuadrada de 224x224. 512{cons.SEPARADOR_INPUT_IMAGENES}214: Imagen de 512 de altura y 214 de anchura"
                             )
                            
+    #parser.add_argument(f"--{cons.DROP_PATH}", type=float, default=0.1, help="Drop path rate (default: 0.1)")
+    #parser.add_argument(f"--{cons.WEIGTH_DECAY}", type=float, default=0.05, help="weight decay (default: 0.05)")
+    #parser.add_argument(f"--{cons.WARMUP_EPOCHS}", type=int, default=10, help="epochs to warmup LR")
+
+    parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=0.001, help="learning rate")
     
-    parser.add_argument(f"--{cons.DROP_PATH}", type=float, default=0.1,
-                        help="Drop path rate (default: 0.1)")
     
-    parser.add_argument(f"--{cons.WEIGTH_DECAY}", type=float, default=0.05,
-                        help="weight decay (default: 0.05)")
-    
-    parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=None,
-                        help="learning rate (absolute lr)")
-    
-    parser.add_argument(f"--{cons.BASE_LEARNING_RATE}", type=float, default=1e-3,
-                        help="base learning rate: absolute_lr = base_lr * total_batch_size / 256")
-    
-    parser.add_argument(f"--{cons.WARMUP_EPOCHS}", type=int, default=10, help="epochs to warmup LR")
+
+    parser.add_argument(f"--{cons.EARLY_STOPPING_PATIENCE}", type=int, default=-1, 
+        help="Número de épocas sin suficientes cambios para que finalice el entrenamiento antes de tiempo (si es -1, está \"desactivado\").")
+    parser.add_argument(f"--{cons.EARLY_STOPPING_MIN_DELTA}", type=int, default=10, 
+        help="Diferencía mínima en las últimas etapas para que el contador del \"early stopper\" avance.")
         
     parser.add_argument(f"--{cons.NUMBER_CLASSES}", default=5, type=int,
                         help="number of the classification types")

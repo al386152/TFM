@@ -98,8 +98,10 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                                     
     loss_fn = torch.nn.CrossEntropyLoss()
     # TODO: Añadir los parámetros de las siguientes funciones como parámetros del programa.
-    early_stopper = EarlyStopper(patience=10, min_delta=10)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    #early_stopper = EarlyStopper(patience=10, min_delta=10)
+    early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
+                                 min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
+    optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
     
     # Creando carpetas para las salidas  
     if not os.path.isdir(partial_models_path) and is_main_device:
