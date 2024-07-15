@@ -33,12 +33,13 @@ class EarlyStopper:
 # --  Fin class EarlyStopper -- #
 
 
-def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True):
+def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True, debuging=False):
     
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
     last_loss = 0
     size_batches = len(training_loader)    
-    
+    log_info_cada = int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) if int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
+
     if is_main_device:
         tiempos = list()
         estimacion_fin = "(Tiempo estimado por lote)"
@@ -47,8 +48,9 @@ def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntr
     for i, data in enumerate(training_loader):
         if is_main_device:
             tiempo_inicio = datetime.now()
-            info_print = f"Batch: [{i + 1}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
-            logger.info(f"{info_print}")
+            if debuging or (i % log_info_cada == 0):
+                info_print = f"Batch: [{i + 1}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
+                logger.info(f"{info_print}")
 
         inputs, labels = data
         inputs, labels = inputs.to(device), labels.to(device)
@@ -64,8 +66,9 @@ def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntr
         optimizer.step()            
         
         if is_main_device:
-            logger.info(f"loss: {loss}")
-            logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")
+            if debuging or (i % log_info_cada == 0):
+                logger.info(f"loss: {loss}")
+                logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")
             ahora = datetime.now()
             #tiempos.append(datetime.now() - tiempo_inicio)
             logger.debug(f"ahora: {str(ahora)}")
@@ -123,7 +126,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         model.train(True)
         avg_loss = train_one_epoch(model=model, device=device,
                                     training_loader=dataloaders[cons.TRAIN_FOLDER_NAME], 
-                                    loss_func=loss_fn, optimizer=optimizer, is_main_device=is_main_device)
+                                    loss_func=loss_fn, optimizer=optimizer, is_main_device=is_main_device,
+                                    debuging=args[cons.SHOW_DEBUG_OUTPUTS])
         running_val_loss = 0.0
 
         model.eval()
@@ -184,6 +188,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         
         m.reset_list_metrics(lista_metricas)
 
+        # TODO: Arreglar esto (sale el tiempo en negativo):
         if is_main_device:
             logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")
             ahora = datetime.now()

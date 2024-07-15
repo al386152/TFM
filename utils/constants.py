@@ -43,6 +43,8 @@ CONFUSION_MATRIX_FILE_FORMAT = ".png"
 
 NUM_GUIONES = 4
 
+TANTO_POR_UNO_LOGS_PRINT = 0.1
+
 # No me apetecía poner if-else para acabar haciendo lo mismo (además de que saco el listado de posibles modelos más facilmente)
 SWITCH_MODELOS = {
     "vgg19": vgg19,
