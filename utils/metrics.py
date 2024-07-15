@@ -56,6 +56,8 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
             
             if is_main_device:
                 logger.debug(f"Confusion Matrix")
+        
+            resultados.append((name, metric.compute()))
 
             if save_confusion_matrix:
                 
@@ -72,9 +74,7 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                     name_file = f"{tiempo}_{args[cons.MODEL]}_confusion_matrix{cons.CONFUSION_MATRIX_FILE_FORMAT}"
                     name_file = os.path.join(cons.CONFUSION_MATRIX_FOLDER_NAME, name_file)                
                     plt.savefig(name_file, dpi=600, bbox_inches ='tight')
-                    
-            else:
-                resultados.append((name, metric.compute()))
+                
         else:
             
             if is_main_device:
