@@ -2,6 +2,6 @@ Summaries
 Proyecto*
 partial_models
 model*
-/__pycache__/
 __otros
 logs
+confusion_matrix

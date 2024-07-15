@@ -27,21 +27,22 @@ def setup_gpu(args:dict):
     device = "cpu"
     worldsize = 1    
     if "cuda" in args[cons.DEVICE]:
-        if int(os.environ["LOCAL_RANK"]) == 0:
+        # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.debug(f"cuda in {str(args[cons.DEVICE])}")
         if not cuda.is_available():
-            if int(os.environ["LOCAL_RANK"]) == 0:
+            if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
                 logger.info("'torch.cuda' is not available ==> cpu")            
             #device = "cpu"
         else:
             if args[cons.IS_DISTRIBUTED]:
-                if int(os.environ["LOCAL_RANK"]) == 0:
+                if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
                     logger.info("Setting up distributed gpu") # TODO: pensar en un mensaje mejor para el log
                 distributed.init_process_group(backend=cons.BACKEND)
                 #device = int(os.environ["LOCAL_RANK"])
                 #worldsize = int(os.environ["WORLD_SIZE"])                
             else:
-                if int(os.environ["LOCAL_RANK"]) == 0:
+                if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
                     logger.info("Setting one gpu") # TODO: pensar en un mensaje mejor para el log
                 device = args[cons.DEVICE]
     #else: device = "cpu"
@@ -105,7 +106,7 @@ def poner_nivel_a_todos_loggers():
 
 if __name__ == "__main__":
     args = ap.get_dict_args()
-    if int(os.environ["LOCAL_RANK"]) == 0:
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         poner_nivel_a_todos_loggers()   
     main(args)
 # -- Fin verdadero main -- #

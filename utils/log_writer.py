@@ -20,8 +20,10 @@ def getLogWritter(name, log_path = cons.DEFAULT_LOG_FOLDER,
                 logging_level=cons.loggin_level, 
                 copiar_a_stdout = True)->logging.Logger:   
 
-    # Realmente, solo el proceso 0 hace los logs
-    if int(os.environ["LOCAL_RANK"]) == 0:
+    # Realmente, solo el proceso 0 hace los logs 
+
+    # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         # TODO: mirar si mover esto a alguna otra parte.
         if not os.path.isdir(log_path):
             os.mkdir(log_path)

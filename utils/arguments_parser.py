@@ -74,7 +74,8 @@ def check_args(args:dict):
     # Comprobamos el modelo
     if args[cons.MODEL] not in cons.POSSIBLE_MODELS:
         texto = f"{cons.MODEL}. Received: {args[cons.MODEL]}. Expected one of {str(cons.POSSIBLE_MODELS)}"
-        if int(os.environ["LOCAL_RANK"]) == 0:        
+         # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):        
             logger.error(texto)
         argparse.ArgumentError(None, texto)
 
@@ -89,15 +90,15 @@ def check_args(args:dict):
     args[cons.ANCHURA_IMG] = int(sizes[1] if len(sizes) > 1 else sizes[0])
     
 def get_dict_args():    
-
-    if int(os.environ["LOCAL_RANK"]) == 0:
+     # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.debug("get_dict_args")
     args = vars(get_args_parser().parse_args())    
-    if int(os.environ["LOCAL_RANK"]) == 0:
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.debug("check_args")
     check_args(args)
     
-    if int(os.environ["LOCAL_RANK"]) == 0:
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.info("Arguments:" + 
                     '\n'.join([(f"\t{k}: {args[k]}") for k in args]) +
                     '\n' + ('-' * cons.NUM_GUIONES)
@@ -109,7 +110,7 @@ def get_dict_args():
 if __name__ == "__main__":
     dict_params = get_dict_args()
 
-    if int(os.environ["LOCAL_RANK"]) == 0:
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.debug(dict_params)
         for k in dict_params:
             logger.debug(f"dict_params[{k}]: {dict_params[k]}")

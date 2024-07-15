@@ -106,7 +106,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         os.mkdir(partial_models_path)
 
     # Si la carpeta donde se guardan las salidas no está creada y otro hilo trata de acceder ==> fallo.
-    barrier()
+    if args[cons.IS_DISTRIBUTED]:
+        barrier()
 
     # Entrenando
     if is_main_device:
@@ -183,7 +184,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
             if is_main_device:
                 logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
                 # Esto es para guardar la matriz de confusión.
-                m.get_metrics(lista_metricas, save_confusion_matrix= True, is_main_device=is_main_device, args=args)
+                m.get_metrics(lista_metricas, save_confusion_matrix=True, is_main_device=is_main_device, args=args)
             break
         
         m.reset_list_metrics(lista_metricas)

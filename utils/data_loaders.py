@@ -53,13 +53,14 @@ def load_datasets(args:dict, is_main_device) -> dict:
         return dict_datasets        
 
 def load_samplers(args:dict, datasets: Tuple)-> dict:    
-
-    world_size = int(os.environ["WORLD_SIZE"])
-    rank = int(os.environ["LOCAL_RANK"])
+        
+    world_size = 1 if ( "WORLD_SIZE" not in os.environ) else int(os.environ["WORLD_SIZE"])
+    rank = 0 if ( "LOCAL_RANK" not in os.environ) else int(os.environ["LOCAL_RANK"])
 
     if rank == 0:
         logger.debug(f"world_size: {world_size} (type: {type(world_size)})")
         logger.debug(f"rank: {rank} (type: {type(rank)})")
+        #logger.debug(f"args[cons.IS_DISTRIBUTED]: {args[cons.IS_DISTRIBUTED]}") 
 
     dict_samplers = {        
         #folder_name: torch.utils.data.SequentialSampler(folder_name)
