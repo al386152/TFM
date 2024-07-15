@@ -2,7 +2,8 @@ import os
 from typing import *
 
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+from torchvision import datasets
+from torchvision.transforms import v2
 from torch.utils.data import DistributedSampler
 
 import utils.constants as cons
@@ -14,17 +15,27 @@ logger = getLogWritter(__name__)
 
 def load_datasets(args:dict, is_main_device) -> dict:
 
-    transform = transforms.Compose([
+    # Transformaciones de las imagens de Validación y Prueba
+    transform = v2.Compose([        
+        v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
+        v2.ToTensor()
+    ])  
+    
+
+    # Transformaciones de las imagens de entrenamiento
+    training_transform = v2.Compose([
         # TODO: Para hacer el aumento de datos MODIFICAR AQUÍ ==>
-        transforms.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
-        transforms.ToTensor()
+        v2.RandomHorizontalFlip(),
+        v2.ColorJitter(),
+        v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
+        v2.ToTensor()
     ])
 
     if not args[cons.SHOW_DEBUG_OUTPUTS]:
         return {
             folder_name:
             datasets.ImageFolder(root = os.path.join(args[cons.DATA_PATH], folder_name),
-                                transform = transform) 
+                                transform = transform if folder_name != cons.TRAIN_FOLDER_NAME else training_transform) 
             for folder_name in cons.LIST_FOLDER_NAMES
         }    
     else:
@@ -39,7 +50,7 @@ def load_datasets(args:dict, is_main_device) -> dict:
             path = os.path.join(args[cons.DATA_PATH], folder_name)
             if is_main_device:
                 logger.debug(f"path: {path}")
-            dict_datasets[folder_name] = datasets.ImageFolder(path, transform = transform)             
+            dict_datasets[folder_name] = datasets.ImageFolder(path, transform = transform if folder_name != cons.TRAIN_FOLDER_NAME else training_transform)           
 
         if is_main_device:
             for data_set in dict_datasets:
@@ -74,7 +85,6 @@ def load_samplers(args:dict, datasets: Tuple)-> dict:
 
     return dict_samplers
 
-# TODO: Por comprobar de que está bien
 def load_data_loaders(args: dict, datasets:dict) -> dict:
 
     samplers = load_samplers(args=args, datasets=datasets)
