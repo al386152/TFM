@@ -31,6 +31,7 @@ def MULTIPLY_TIME(time, alpha:float)->timedelta:
 
 
 def validate_dataset(dataset, logger):
+    # Esta función se tiene que hacer solo si es el hilo principal.
     class_counts = {}
     for _, label in dataset:
         if label not in class_counts:

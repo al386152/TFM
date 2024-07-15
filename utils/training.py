@@ -1,6 +1,7 @@
 import os
 
 import torch
+from torch.distributed import barrier
 
 from datetime import datetime
 import utils.constants as cons
@@ -25,8 +26,9 @@ class EarlyStopper:
             self.counter = 0
         elif validation_loss > (self.min_validation_loss + self.min_delta):
             self.counter += 1
-            if self.counter >= self.patience:
-                return True
+            #if self.counter >= self.patience:
+            #    return True
+            return self.counter >= self.patience
         return False
 # --  Fin class EarlyStopper -- #
 
@@ -92,12 +94,16 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                     
     loss_fn = torch.nn.CrossEntropyLoss()
-    early_stopper = EarlyStopper(patience=3, min_delta=10)
+    # TODO: Añadir los parámetros de las siguientes funciones como parámetros del programa.
+    early_stopper = EarlyStopper(patience=10, min_delta=10)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     
     # Creando carpetas para las salidas  
     if not os.path.isdir(partial_models_path) and is_main_device:
         os.mkdir(partial_models_path)
+
+    # Si la carpeta donde se guardan las salidas no está creada y otro hilo trata de acceder ==> fallo.
+    barrier()
 
     # Entrenando
     if is_main_device:
@@ -149,7 +155,6 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                 m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
         lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix= (epoch == num_epochs-1), is_main_device=is_main_device, args=args)
-        m.reset_list_metrics(lista_metricas)
 
         avg_val_loss = running_val_loss / (i + 1)
         if is_main_device:
@@ -160,19 +165,25 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
             for name, metric in lista_resultados:
                 logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
 
-        if is_main_device and avg_val_loss < best_loss:
+        if avg_val_loss < best_loss:
             best_loss = avg_val_loss
-            model_name = f"model_{epoch}_{timestamp}.pth"
-            model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
-                                    model_name) 
+            if is_main_device :
+                model_name = f"model_{epoch}_{timestamp}.pth"
+                model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
+                                        model_name) 
 
-            torch.save(model.state_dict(), model_path)
+                torch.save(model.state_dict(), model_path)
 
         # Para el early stopping
         if early_stopper.early_stop(running_val_loss):
-            logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
+            if is_main_device:
+                logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
+                # Esto es para guardar la matriz de confusión.
+                m.get_metrics(lista_metricas, save_confusion_matrix= True, is_main_device=is_main_device, args=args)
             break
         
+        m.reset_list_metrics(lista_metricas)
+
         if is_main_device:
             logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")
             ahora = datetime.now()

@@ -1,3 +1,5 @@
+import os
+
 import argparse
 import logging
 
@@ -72,7 +74,8 @@ def check_args(args:dict):
     # Comprobamos el modelo
     if args[cons.MODEL] not in cons.POSSIBLE_MODELS:
         texto = f"{cons.MODEL}. Received: {args[cons.MODEL]}. Expected one of {str(cons.POSSIBLE_MODELS)}"
-        logger.error(texto)
+        if int(os.environ["LOCAL_RANK"]) == 0:        
+            logger.error(texto)
         argparse.ArgumentError(None, texto)
 
     # Comprobamos si mostrar las opciones de debug
@@ -87,15 +90,18 @@ def check_args(args:dict):
     
 def get_dict_args():    
 
-    logger.debug("get_dict_args")
+    if int(os.environ["LOCAL_RANK"]) == 0:
+        logger.debug("get_dict_args")
     args = vars(get_args_parser().parse_args())    
-    logger.debug("check_args")
+    if int(os.environ["LOCAL_RANK"]) == 0:
+        logger.debug("check_args")
     check_args(args)
     
-    logger.info("Arguments:" + 
-                '\n'.join([(f"\t{k}: {args[k]}") for k in args]) +
-                '\n' + ('-' * cons.NUM_GUIONES)
-                )
+    if int(os.environ["LOCAL_RANK"]) == 0:
+        logger.info("Arguments:" + 
+                    '\n'.join([(f"\t{k}: {args[k]}") for k in args]) +
+                    '\n' + ('-' * cons.NUM_GUIONES)
+                    )
     return args
 
 
@@ -103,8 +109,7 @@ def get_dict_args():
 if __name__ == "__main__":
     dict_params = get_dict_args()
 
-    logger.debug(dict_params)
-    #logger.debug('-' * cons.NUM_GUIONES)
-
-    for k in dict_params:
-        logger.debug(f"dict_params[{k}]: {dict_params[k]}")
+    if int(os.environ["LOCAL_RANK"]) == 0:
+        logger.debug(dict_params)
+        for k in dict_params:
+            logger.debug(f"dict_params[{k}]: {dict_params[k]}")

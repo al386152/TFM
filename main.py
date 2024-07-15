@@ -25,20 +25,24 @@ def setup_gpu(args:dict):
 
     # Estableciendo el dispositivo en el que se va a trabajar.
     device = "cpu"
-    worldsize = 1
+    worldsize = 1    
     if "cuda" in args[cons.DEVICE]:
-        logger.debug(f"cuda in {str(args[cons.DEVICE])}")
+        if int(os.environ["LOCAL_RANK"]) == 0:
+            logger.debug(f"cuda in {str(args[cons.DEVICE])}")
         if not cuda.is_available():
-            logger.info("'torch.cuda' is not available ==> cpu")            
+            if int(os.environ["LOCAL_RANK"]) == 0:
+                logger.info("'torch.cuda' is not available ==> cpu")            
             #device = "cpu"
         else:
             if args[cons.IS_DISTRIBUTED]:
-                logger.info("Setting up distributed gpu") # TODO: pensar en un mensaje mejor para el log
+                if int(os.environ["LOCAL_RANK"]) == 0:
+                    logger.info("Setting up distributed gpu") # TODO: pensar en un mensaje mejor para el log
                 distributed.init_process_group(backend=cons.BACKEND)
                 #device = int(os.environ["LOCAL_RANK"])
                 #worldsize = int(os.environ["WORLD_SIZE"])                
             else:
-                logger.info("Setting one gpu") # TODO: pensar en un mensaje mejor para el log
+                if int(os.environ["LOCAL_RANK"]) == 0:
+                    logger.info("Setting one gpu") # TODO: pensar en un mensaje mejor para el log
                 device = args[cons.DEVICE]
     #else: device = "cpu"
     
@@ -96,13 +100,12 @@ def main(args: dict):
 # Esto lo hago así porque no se me ha ocurrido de otra forma de poner el nivel correcto a todos los loggers de todos los scripts
 def poner_nivel_a_todos_loggers():
     lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger]
-
-    #for _logger in lista_loggers:
-        #_logger.setLevel(cons.loggin_level)
     set_level(lista_loggers, cons.loggin_level)
 # -- Fin poner_nivel_a_todos_loggers -- #
 
 if __name__ == "__main__":
     args = ap.get_dict_args()
-    poner_nivel_a_todos_loggers()   
+    if int(os.environ["LOCAL_RANK"]) == 0:
+        poner_nivel_a_todos_loggers()   
     main(args)
+# -- Fin verdadero main -- #

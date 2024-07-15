@@ -65,12 +65,14 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                 metric.plot(cmap=plt.cm.Blues)                
                 tiempo = str(datetime.now().replace(microsecond=0)).replace(':', '')
 
-                if not os.path.isdir(cons.CONFUSION_MATRIX_FOLDER_NAME) and is_main_device:
-                    os.mkdir(cons.CONFUSION_MATRIX_FOLDER_NAME)
-
-                name_file = f"{tiempo}_{args[cons.MODEL]}_confusion_matrix{cons.CONFUSION_MATRIX_FILE_FORMAT}"
-                name_file = os.path.join(cons.CONFUSION_MATRIX_FOLDER_NAME, name_file)
-                plt.savefig(name_file, dpi=600, bbox_inches ='tight')
+                if is_main_device:
+                    if not os.path.isdir(cons.CONFUSION_MATRIX_FOLDER_NAME):
+                        os.mkdir(cons.CONFUSION_MATRIX_FOLDER_NAME)
+                            
+                    name_file = f"{tiempo}_{args[cons.MODEL]}_confusion_matrix{cons.CONFUSION_MATRIX_FILE_FORMAT}"
+                    name_file = os.path.join(cons.CONFUSION_MATRIX_FOLDER_NAME, name_file)                
+                    plt.savefig(name_file, dpi=600, bbox_inches ='tight')
+                    
             else:
                 resultados.append((name, metric.compute()))
         else:

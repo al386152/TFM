@@ -39,7 +39,8 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1, is_m
 # https://github.com/munniomer/pytorch-tutorials/blob/master/beginner_source/finetuning_torchvision_models_tutorial.py
 def fine_tuning(model, model_name, outputs, is_main_device):
     
-    logger.info("Adding fine-tuning layers")                        
+    if is_main_device:
+        logger.info("Adding fine-tuning layers")                        
     
     #if model_name == "vgg19":
     if "vgg" in model_name:
@@ -49,8 +50,9 @@ def fine_tuning(model, model_name, outputs, is_main_device):
         classifier_layer = model.fc
     elif "densenet" in model_name:
         classifier_layer = model.classifier
-    else: 
-        logger.warning(f"Han habido varias comprobaciones antes, ¿cómo has llegado aquí?. 'model_name: {model_name}'")
+    else:
+        if is_main_device: 
+            logger.warning(f"Han habido varias comprobaciones antes, ¿cómo has llegado aquí?. 'model_name: {model_name}'")
         classifier_layer = None
 
     num_ftrs = classifier_layer.in_features
@@ -74,7 +76,9 @@ def fine_tuning(model, model_name, outputs, is_main_device):
 # -- Fin fine_tuning -- #
 
 def saving_the_model(args: dict, model):
-    model_name = OUTPUT_MODEL_NAME(name=args[cons.MODEL], number_clases=args[cons.NUMBER_CLASSES])
+    # Esta función se tiene que ejecutar solo en un único hilo.
+
+    model_name = OUTPUT_MODEL_NAME(name=args[cons.MODEL], number_clases=args[cons.NUMBER_CLASSES])    
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
     torch.save(model.state_dict(),  model_name)
 # -- Fin saving_the_model -- #
@@ -91,8 +95,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     model.eval()
 
     if is_main_device:
-        # TODO: hacerlo un "debug"
-        logger.info(f"evaluate_model - inicio")
+        logger.debug(f"evaluate_model - inicio")
     
     num_elementos = len(dataloader)
 
@@ -109,8 +112,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
     if is_main_device:
-        # TODO: hacerlo un "debug"
-        logger.info(f"evaluate_model - get metrics")
+        logger.debug(f"evaluate_model - get metrics")
     lista_resultados = m.get_metrics(lista_metricas, args=args, save_confusion_matrix=True, is_main_device=is_main_device)
     m.reset_list_metrics(lista_metricas)
     
