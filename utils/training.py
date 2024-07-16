@@ -175,7 +175,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         if avg_val_loss < best_loss:
             best_loss = avg_val_loss
             if is_main_device :
-                model_name = f"model_{epoch}_{timestamp}.pth"
+                model_name = f"{args[cons.MODEL]}_{args[cons.NUMBER_CLASSES]}_{timestamp}.pth"
                 model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
                                         model_name) 
 
