@@ -21,24 +21,21 @@ def load_datasets(args:dict, is_main_device) -> dict:
         v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
         #v2.ToTensor() # deprecated
         # The transform `ToTensor()` is deprecated and will be removed in a future release. Instead, please use `v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])`.Output is equivalent up to float precision.
-        # TODO: mirar si son los 2 o si solo es 1 de ellos.
-        #v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True), 
         #v2.Normalize() # TODO: Ver si añado normalización
     ])  
         
 
     # Transformaciones de las imagens de entrenamiento
-    training_transform = v2.Compose([
-        # TODO: Para hacer el aumento de datos MODIFICAR AQUÍ ==>
+    training_transform = v2.Compose([        
         v2.PILToTensor(),
+        
         v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
         v2.RandomHorizontalFlip(), # Probabilidad de 0.5 (no me parece nesario poner una variable)
-        v2.ColorJitter(brightness=args[cons.COLOR_JITTER_BRIGHTNESS], contrast=args[cons.COLOR_JITTER_CONTRAST], 
-                       saturation=args[cons.COLOR_JITTER_SATURATION], hue=args[cons.COLOR_JITTER_HUE]),                
         v2.RandomRotation(cons.ROTATION_DEGREES),
-        # v2.ToTensor() # deprecated
-        #v2.ToImage(),
+        v2.ColorJitter(brightness=args[cons.COLOR_JITTER_BRIGHTNESS], contrast=args[cons.COLOR_JITTER_CONTRAST], 
+                       saturation=args[cons.COLOR_JITTER_SATURATION], hue=args[cons.COLOR_JITTER_HUE]),         
+        # TODO: Para hacer el aumento de datos MODIFICAR AQUÍ ==>
         v2.ToDtype(torch.float32, scale=True),
     ])
 
