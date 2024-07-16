@@ -32,8 +32,8 @@ def get_args_parser():
 
     parser.add_argument(f"--{cons.EARLY_STOPPING_PATIENCE}", type=int, default=-1, 
         help="Número de épocas sin suficientes cambios para que finalice el entrenamiento antes de tiempo (si es -1, está \"desactivado\").")
-    parser.add_argument(f"--{cons.EARLY_STOPPING_MIN_DELTA}", type=int, default=10, 
-        help="Diferencía mínima en las últimas etapas para que el contador del \"early stopper\" avance.")
+    parser.add_argument(f"--{cons.EARLY_STOPPING_MIN_DELTA}", type=float, default=0.5, 
+        help="Diferencía mínima en las últimas etapas para que el contador del \"early stopper\" avance.") 
         
     parser.add_argument(f"--{cons.NUMBER_CLASSES}", default=5, type=int,
                         help="number of the classification types")
