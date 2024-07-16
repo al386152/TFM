@@ -2,7 +2,6 @@
 
 ## Instalación
 
-Si tienes una versión de CUDA superior a 11.0:
 ```
 conda create -n proyecto python=3.8 -y
 conda activate proyecto
