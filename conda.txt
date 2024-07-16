@@ -1,7 +1,0 @@
-conda create -n proyecto python=3.8 -y
-
-# Esto está por completar, no va aún:
-conda create -n proyecto_P2c01 python=3.8 -y
-conda activate proyecto_P2c01
-
-pip install -r requirements_proyecto_P2c01.txt
