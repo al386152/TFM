@@ -65,6 +65,12 @@ def get_args_parser():
     parser.add_argument(f"--{cons.IS_DISTRIBUTED}", action='store_true', default=False,
             help="True: the training is distributed. False: the training is only local.")
 
+    # Variables relacionadas con "Color Jitter"
+    parser.add_argument(f"--{cons.COLOR_JITTER_BRIGHTNESS}", default="0.5", type=str, help=f"No utilizar números negativos. Si es un solo número, el rango será: [max(0, 1 - N), 1 + N]. Si se dan dos número separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', esos serán el mínimo y máximo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
+    parser.add_argument(f"--{cons.COLOR_JITTER_CONTRAST}", default="0.5", type=str, help=f"No utilizar números negativos. Si es un solo número, el rango será: [max(0, 1 - N), 1 + N]. Si se dan dos número separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', esos serán el mínimo y máximo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
+    parser.add_argument(f"--{cons.COLOR_JITTER_SATURATION}", default="0.5", type=str, help=f"No utilizar números negativos. Si es un solo número, el rango será: [max(0, 1 - N), 1 + N]. Si se dan dos número separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', esos serán el mínimo y máximo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
+    parser.add_argument(f"--{cons.COLOR_JITTER_HUE}", default="0", type=str, help=f"Si es un solo número se debe escoger entre [0, 0.5] y el resultado será [-hue, hue]. Si son dos números separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \' (por ejemplo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"), escoger valores en el intervalo [-0.5, 0.5] y el resultado será un número en el intervalo [min, max]")
+
     return parser
 
 def check_args(args:dict):
@@ -82,10 +88,16 @@ def check_args(args:dict):
         cons.loggin_level = logging._levelToName[logging.DEBUG]
     #else: logging._levelToName(logging.INFO)
 
-    # Ponemos
+    # Ponemos como toca la altura y la anchura
     sizes = args[cons.INPUT_SIZE].split(cons.SEPARADOR_INPUT_IMAGENES)    
     args[cons.ALTURA_IMG] = int(sizes[0])
     args[cons.ANCHURA_IMG] = int(sizes[1] if len(sizes) > 1 else sizes[0])
+
+    # Ponemos como toca las variables de color jitter
+    for color_jitter_op in [cons.COLOR_JITTER_BRIGHTNESS, cons.COLOR_JITTER_CONTRAST, cons.COLOR_JITTER_SATURATION, cons.COLOR_JITTER_HUE]:
+        splitted = args[color_jitter_op].split(cons.SEPARADOR_INPUTS_COLOR_JITTER)
+        args[color_jitter_op] = (float(splitted[0]), float(splitted[1])) if len(splitted) > 1 else float(splitted[0])
+
     
 def get_dict_args():    
      # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia

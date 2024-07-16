@@ -18,6 +18,10 @@ NOT_FREEZE_LAYERS = "not_freeze"
 IS_DISTRIBUTED = "is_distributed"
 EARLY_STOPPING_PATIENCE = "patience"
 EARLY_STOPPING_MIN_DELTA = "min_delta"
+COLOR_JITTER_BRIGHTNESS = "brightness"
+COLOR_JITTER_CONTRAST = "contrast" 
+COLOR_JITTER_SATURATION = "saturation"
+COLOR_JITTER_HUE = "hue"
 
 #DROP_PATH = "drop_path"
 #WEIGTH_DECAY = "weight_decay"
@@ -35,6 +39,7 @@ LOG_OUTPUT_FORMAT = "[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s"
 LOG_BATCH_TRAINING_FORMAT = '\r' + LOG_OUTPUT_FORMAT
 
 SEPARADOR_INPUT_IMAGENES = 'x'
+SEPARADOR_INPUTS_COLOR_JITTER = ','
 
 ANCHURA_IMG = "anchura"
 ALTURA_IMG = "altura"
@@ -59,6 +64,9 @@ POSSIBLE_MODELS = SWITCH_MODELOS.keys()
 DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 
 BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
+
+ROTATION_DEGREES = 30 # Diría que 30º en ambos sentidos es la rotación máxima que podría encontrarse en la vida real
+
 
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]
