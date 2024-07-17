@@ -33,7 +33,8 @@ class EarlyStopper:
 # --  Fin class EarlyStopper -- #
 
 
-def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True, debuging=False):
+def train_one_epoch(model, training_loader, device, estimacion_duracion,
+                    loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True, debuging=False):
     
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
     last_loss = 0
@@ -42,8 +43,7 @@ def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntr
 
     if is_main_device:
         tiempos = list()
-        estimacion_fin = "(Tiempo estimado por lote)"
-        estimacion_fin_todos = "(Tiempo estimado total restante)"
+        estimacion_fin, estimacion_fin_todos = estimacion_duracion
     
     for i, data in enumerate(training_loader):
         if is_main_device:
@@ -73,16 +73,21 @@ def train_one_epoch(model, training_loader, device, loss_func=torch.nn.CrossEntr
             #tiempos.append(datetime.now() - tiempo_inicio)
             logger.debug(f"ahora: {str(ahora)}")
             tiempos.append(ahora - tiempo_inicio)
-            #_estimacion_fin = sum(tiempos)/len(tiempos)
-            _estimacion_fin = MEAN_TIMES(tiempos)
-            logger.debug(f"_estimacion_fin: {str(_estimacion_fin)}")
+            #media_est_fin = sum(tiempos)/len(tiempos)
+            media_est_fin = MEAN_TIMES(tiempos)
+            logger.debug(f"media_est_fin: {str(media_est_fin)}")
 
-            _estimacion_fin_todos = MULTIPLY_TIME(_estimacion_fin, (size_batches - i) )
-            logger.debug(f"_estimacion_fin_todos: {str(_estimacion_fin_todos)}")
-            estimacion_fin = GET_TIME_HMS_FORMAT(_estimacion_fin)
-            estimacion_fin_todos = GET_TIME_HMS_FORMAT(_estimacion_fin_todos)
+            media_est_fin_todos = MULTIPLY_TIME(media_est_fin, (size_batches - i) )
+            logger.debug(f"media_est_fin_todos: {str(media_est_fin_todos)}")
+            estimacion_fin = GET_TIME_HMS_FORMAT(media_est_fin)
+            estimacion_fin_todos = GET_TIME_HMS_FORMAT(media_est_fin_todos)
+        
+        if is_main_device:
+            # No guardo la lista de los tiempos de una iteración a otra porque acabaría consumiéndose demasiada memoria (nº lotes * nº epochs) para un print.
+            estimacion_duracion = (media_est_fin, MULTIPLY_TIME(media_est_fin, size_batches))
 
-    return last_loss
+    # estimacion_duracion cambia de valor en el hilo principal, que es el que muestra los datos, mientras que en el resto de hilos se mantiene igual.
+    return last_loss, estimacion_duracion
 # --  Fin train_one_epoch -- #
 
 def train_model(args: dict, model, dataloaders, is_main_device, device, lista_metricas):
@@ -97,8 +102,6 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                     
     loss_fn = torch.nn.CrossEntropyLoss()
-    # TODO: Añadir los parámetros de las siguientes funciones como parámetros del programa.
-    #early_stopper = EarlyStopper(patience=10, min_delta=10)
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
     optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
@@ -111,26 +114,30 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     if args[cons.IS_DISTRIBUTED]:
         barrier()
 
-    # Entrenando
+    # Estas siguientes líneas es para tener una estimación del tiempo que se va a tardar a partir de las iteraciones anteriores.
     if is_main_device:
         tiempos = list()
         estimacion_fin = "(Tiempo estimado por época)"
         estimacion_fin_todos = "(Tiempo estimado total restante)"
 
-    num_epochs = args[cons.EPOCS]
+    est_duracion_batch = ("(Tiempo estimado por lote)", "(Tiempo estimado total restante)") 
 
+    num_epochs = args[cons.EPOCS]
+    # Entrenando
     for epoch in range(num_epochs):       
         
         if is_main_device:
             tiempo_inicio = datetime.now()
-            info_print = f"Epoch: [{epoch + 1}/{num_epochs}] - {estimacion_fin} || {estimacion_fin_todos}"
+            info_print = f"Epoch: [{epoch + 1}/{num_epochs}] - {estimacion_fin} || {estimacion_fin_todos}\n"
             logger.info(info_print)
 
         model.train(True)
-        avg_loss = train_one_epoch(model=model, device=device,
-                                    training_loader=dataloaders[cons.TRAIN_FOLDER_NAME], 
-                                    loss_func=loss_fn, optimizer=optimizer, is_main_device=is_main_device,
-                                    debuging=args[cons.SHOW_DEBUG_OUTPUTS])
+        avg_loss, est_duracion_batch = train_one_epoch(model=model, device=device, 
+                                                       training_loader=dataloaders[cons.TRAIN_FOLDER_NAME],  
+                                                       loss_func=loss_fn, optimizer=optimizer, 
+                                                       estimacion_duracion=est_duracion_batch, 
+                                                       is_main_device=is_main_device, 
+                                                       debuging=args[cons.SHOW_DEBUG_OUTPUTS])
         running_val_loss = 0.0
 
         model.eval()
@@ -191,21 +198,21 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         
         m.reset_list_metrics(lista_metricas)
 
-        # TODO: Arreglar esto (sale el tiempo en negativo):
         if is_main_device:
-            logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")
+            logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")            
             ahora = datetime.now()
-            #tiempos.append(datetime.now() - tiempo_inicio)
-            logger.debug(f"ahora: {str(ahora)}")
+            
+            logger.debug(f"ahora: {str(ahora)}")            
             tiempos.append(ahora - tiempo_inicio)
-            #_estimacion_fin = sum(tiempos)/len(tiempos)
-            _estimacion_fin = MEAN_TIMES(tiempos)
-            logger.debug(f"_estimacion_fin: {str(_estimacion_fin)}")
+            
+            media_est_fin = MEAN_TIMES(tiempos)        
+            logger.debug(f"media_est_fin: {str(media_est_fin)}")            
 
-            _estimacion_fin_todos = MULTIPLY_TIME(_estimacion_fin, (num_epochs - i) )
-            logger.debug(f"_estimacion_fin_todos: {str(_estimacion_fin_todos)}")
-            estimacion_fin = GET_TIME_HMS_FORMAT(_estimacion_fin)
-            estimacion_fin_todos = GET_TIME_HMS_FORMAT(_estimacion_fin_todos)
+            media_est_fin_todos = MULTIPLY_TIME(media_est_fin, (num_epochs - epoch) )
+            logger.debug(f"media_est_fin_todos: {str(media_est_fin_todos)}")
+                         
+            estimacion_fin = GET_TIME_HMS_FORMAT(media_est_fin)
+            estimacion_fin_todos = GET_TIME_HMS_FORMAT(media_est_fin_todos)
     
     if is_main_device:
         logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))

@@ -4,20 +4,13 @@ def OUTPUT_MODEL_NAME(name:str, number_clases:int)->str:
     return f"model_{name}_{number_clases}_outputs.pth"
 
 # Se asume que la lista no está vacía
-def GET_TIME_HMS_FORMAT(time)->str:
+def GET_TIME_HMS_FORMAT(time, time_format="%H:%M:%S.%f")->str:
     
+    # Si es timedelta, lo volvemos a transformar en un datetime y, de ahí, a un string con el formato deseado.
     if isinstance(time, timedelta):
-        days, seconds = time.days, time.seconds
-
-        h = days * 24 + seconds // 3600
-        m = (seconds % 3600) // 60
-        s = (seconds % 60)    
-        
-        output = f"{h:02}:{m:02}:{s:02}"
-    else: 
-        output = time.strftime("%H:%M:%S")
+        time = datetime.strptime(str(time), time_format)
     
-    return output 
+    return time.strftime(time_format)
 
 # Se asume que la lista no está vacía
 def MEAN_TIMES(list_times: list)->timedelta:
