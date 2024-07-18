@@ -20,7 +20,7 @@ from utils.data_loaders import load_datasets, load_data_loaders, logger as dl_lo
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
 
-# TODO: Revisar esto (seguro que hay una forma mucho mejor de hacerlo) y mirar de moverlo a otra carpeta.
+# TODO: Revisar esto (seguro que hay una forma mucho mejor de hacerlo)
 def setup_gpu(args:dict):
 
     # Estableciendo el dispositivo en el que se va a trabajar.
@@ -88,6 +88,8 @@ def main(args: dict):
         tiempo_entrenamiento = GET_TIME_HMS_FORMAT((datetime.now() - t_inicio))
         logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")            
     
+    # TODO: añadir aquí que se evalúe el modelo con los datos de test.
+
     if is_main_device:
         mr.saving_the_model(args, model)
         logger.info(f"{'-' * cons.NUM_GUIONES} Programa finalizado {'-' * cons.NUM_GUIONES}")
