@@ -1,7 +1,7 @@
 from torchvision.models import vgg19, resnet50, resnet152, densenet121, densenet169
 from logging import _levelToName, INFO
 
-# Nombres argumentos
+# Nombres argumentos del programa
 BATCH_SIZE = "batch_size"
 EPOCS = "epochs"
 INPUT_SIZE = "input_size"
@@ -23,6 +23,11 @@ COLOR_JITTER_CONTRAST = "contrast"
 COLOR_JITTER_SATURATION = "saturation"
 COLOR_JITTER_HUE = "hue"
 
+TEST_DATA_PATH = "test_path"
+TRAIN_DATA_PATH = "train_path"
+VALIDATION_DATA_PATH = "val_path"
+SPLIT_PERCENTAGES = "split_perc"
+
 #DROP_PATH = "drop_path"
 #WEIGTH_DECAY = "weight_decay"
 #WARMUP_EPOCHS = "warmup_epochs"
@@ -32,6 +37,8 @@ VALIDATION_FOLDER_NAME = "val"
 TRAIN_FOLDER_NAME = "train"
 LIST_FOLDER_NAMES = [TEST_FOLDER_NAME, VALIDATION_FOLDER_NAME, TRAIN_FOLDER_NAME]
 
+DEFAULT_TRAIN_VAL_TEST_PERCENTAGES=[0.7, 0.2, 0.1]
+
 DEFAULT_LOG_FOLDER = "logs"
 BASE_LOG_FILE_NAME = "output"
 
@@ -40,6 +47,7 @@ LOG_BATCH_TRAINING_FORMAT = '\r' + LOG_OUTPUT_FORMAT
 
 SEPARADOR_INPUT_IMAGENES = 'x'
 SEPARADOR_INPUTS_COLOR_JITTER = ','
+SEPARADOR_SPLIT_PERCENTAGES = ','
 
 ANCHURA_IMG = "anchura"
 ALTURA_IMG = "altura"

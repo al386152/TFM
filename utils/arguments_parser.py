@@ -27,8 +27,6 @@ def get_args_parser():
     #parser.add_argument(f"--{cons.WARMUP_EPOCHS}", type=int, default=10, help="epochs to warmup LR")
 
     parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=0.001, help="learning rate")
-    
-    
 
     parser.add_argument(f"--{cons.EARLY_STOPPING_PATIENCE}", type=int, default=-1, 
         help="Número de épocas sin suficientes cambios para que finalice el entrenamiento antes de tiempo (si es -1, está \"desactivado\").")
@@ -38,8 +36,21 @@ def get_args_parser():
     parser.add_argument(f"--{cons.NUMBER_CLASSES}", default=5, type=int,
                         help="number of the classification types")
 
-    parser.add_argument(f"--{cons.DATA_PATH}", default="../Datasets/MESSIDOR2", type=str,
-                        help="dataset path")
+    parser.add_argument(f"--{cons.DATA_PATH}", default=None, type=str,
+                        help=f"dataset path if you have all the data inside this folder, both separated in 3 folders ({cons.TEST_FOLDER_NAME}, {cons.VALIDATION_FOLDER_NAME}, {cons.TRAIN_FOLDER_NAME}) or all together, or if you have the train and validation data in that folder.")
+
+    parser.add_argument(f"--{cons.TEST_DATA_PATH}", default=None, type=str,
+                        help="Test dataset's path")
+    parser.add_argument(f"--{cons.TRAIN_DATA_PATH}", default=None, type=str,
+                        help="Test dataset's path")
+    parser.add_argument(f"--{cons.VALIDATION_DATA_PATH}", default=None, type=str,
+                        help="Validation dataset's path")
+    parser.add_argument(f"--{cons.SPLIT_PERCENTAGES}", default=None, type=str,
+                        help=f"If you have all the data in 1 folder: Train, validation and test percentajes. \
+                        \"Train{cons.SEPARADOR_SPLIT_PERCENTAGES}Validation{cons.SEPARADOR_SPLIT_PERCENTAGES}Test\". \
+                        If you have the train and validation data in one folder: \"Train{cons.SEPARADOR_SPLIT_PERCENTAGES}Validation\".")                        
+
+
     parser.add_argument(f"--{cons.OUTPUT_DIR}", default="./output_dir", type=str,
                         help="path where to save, empty for no saving")
     
@@ -97,6 +108,18 @@ def check_args(args:dict):
     for color_jitter_op in [cons.COLOR_JITTER_BRIGHTNESS, cons.COLOR_JITTER_CONTRAST, cons.COLOR_JITTER_SATURATION, cons.COLOR_JITTER_HUE]:
         splitted = args[color_jitter_op].split(cons.SEPARADOR_INPUTS_COLOR_JITTER)
         args[color_jitter_op] = (float(splitted[0]), float(splitted[1])) if len(splitted) > 1 else float(splitted[0])
+
+    # Poniendo como tocan los porcentajes
+    if args[cons.SPLIT_PERCENTAGES] is None:
+        args[cons.SPLIT_PERCENTAGES] = cons.DEFAULT_TRAIN_VAL_TEST_PERCENTAGES
+    else:        
+        args[cons.SPLIT_PERCENTAGES] = args[cons.SPLIT_PERCENTAGES].split(cons.SEPARADOR_SPLIT_PERCENTAGES)
+    
+    # Ahora poniéndolos en "Tanto por 1"
+    for i in range(len(args[cons.SPLIT_PERCENTAGES])):
+        logger.info(f"Antes: {args[cons.SPLIT_PERCENTAGES][i]}")
+        args[cons.SPLIT_PERCENTAGES][i] = float(args[cons.SPLIT_PERCENTAGES][i])/100
+        logger.info(f"Después: {args[cons.SPLIT_PERCENTAGES][i]}")
 
     
 def get_dict_args():    
