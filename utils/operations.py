@@ -8,7 +8,12 @@ def GET_TIME_HMS_FORMAT(time, time_format="%H:%M:%S.%f")->str:
     
     # Si es timedelta, lo volvemos a transformar en un datetime y, de ahí, a un string con el formato deseado.
     if isinstance(time, timedelta):
-        time = datetime.strptime(str(time), time_format)
+        # Se ha dado el caso de que si justo ha ocurrido en el mismo microsegundo, timedelta elimina los microsegundos de su string
+        if time.microseconds == 0:
+            _time_format = time_format[: time_format.index(".%f") ]
+        else:
+            _time_format = time_format
+        time = datetime.strptime(str(time), _time_format)
     
     return time.strftime(time_format)
 
