@@ -125,9 +125,10 @@ def load_datasets(args:dict, is_main_device) -> dict:
 
     training_transform = v2.Compose([        
         v2.PILToTensor(),
-        
-        v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
+        v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),        
         v2.RandomHorizontalFlip(), # Probabilidad de 0.5 (no me parece nesario poner una variable)
+        v2.RandomVerticalFlip(), # Probabilidad de 0.5 (no me parece nesario poner una variable)
+        v2.RandomPerspective(distortion_scale=cons.RANDOM_PERSPECTIVE_DISTORSION_SCALE), # Probabilidad de 0.5
         v2.RandomRotation(cons.ROTATION_DEGREES),
         v2.ColorJitter(brightness=args[cons.COLOR_JITTER_BRIGHTNESS], contrast=args[cons.COLOR_JITTER_CONTRAST], 
                        saturation=args[cons.COLOR_JITTER_SATURATION], hue=args[cons.COLOR_JITTER_HUE]),         

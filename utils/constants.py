@@ -74,7 +74,7 @@ DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
 
 ROTATION_DEGREES = 30 # Diría que 30º en ambos sentidos es la rotación máxima que podría encontrarse en la vida real
-
+RANDOM_PERSPECTIVE_DISTORSION_SCALE = 0.15 # No creo que sea buena idea modificar demasiado las imágenes
 
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]
