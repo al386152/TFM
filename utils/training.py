@@ -168,7 +168,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                 
                 m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
-        lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix= (epoch == num_epochs-1), is_main_device=is_main_device, args=args)
+        #lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix= (epoch == num_epochs-1), is_main_device=is_main_device, args=args)
+        lista_resultados = m.get_metrics(lista_metricas, is_main_device=is_main_device, args=args)
 
         avg_val_loss = running_val_loss / (i + 1)
         if is_main_device:
@@ -191,9 +192,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         # Para el early stopping
         if early_stopper.early_stop(running_val_loss):
             if is_main_device:
-                logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")            
-                # Esto es para guardar la matriz de confusión.
-                m.get_metrics(lista_metricas, save_confusion_matrix=True, is_main_device=is_main_device, args=args)
+                logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
             break
         
         m.reset_list_metrics(lista_metricas)

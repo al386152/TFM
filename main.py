@@ -86,9 +86,16 @@ def main(args: dict):
     t.train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, lista_metricas=metricas)
     if is_main_device:
         tiempo_entrenamiento = GET_TIME_HMS_FORMAT((datetime.now() - t_inicio))
-        logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")            
+        logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
+
+    # Evaluando el modelo con el conjunto de "test"    
+    if is_main_device:
+        logger.info(f"{'-' * cons.NUM_GUIONES} Probando el modelo {'-' * cons.NUM_GUIONES}")
     
-    # TODO: añadir aquí que se evalúe el modelo con los datos de test.
+    mr.evaluate_model(model=model, dataloader=data_loaders[cons.TEST_FOLDER_NAME], device=device, 
+                      is_main_device=is_main_device, lista_metricas=metricas, args=args)
+    if is_main_device:
+        logger.info(f"{'-' * cons.NUM_GUIONES} Fin test {'-' * cons.NUM_GUIONES}")
 
     if is_main_device:
         mr.saving_the_model(args, model)
