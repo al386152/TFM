@@ -117,9 +117,13 @@ def check_args(args:dict):
     
     # Ahora poniéndolos en "Tanto por 1"
     for i in range(len(args[cons.SPLIT_PERCENTAGES])):
-        logger.info(f"Antes: {args[cons.SPLIT_PERCENTAGES][i]}")
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.debug(f"Antes: {args[cons.SPLIT_PERCENTAGES][i]}")
+
         args[cons.SPLIT_PERCENTAGES][i] = float(args[cons.SPLIT_PERCENTAGES][i])/100
-        logger.info(f"Después: {args[cons.SPLIT_PERCENTAGES][i]}")
+
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.debug(f"Después: {args[cons.SPLIT_PERCENTAGES][i]}")
 
     
 def get_dict_args():    
