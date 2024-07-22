@@ -5,7 +5,8 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 import utils.constants as cons
-from .log_writer import getLogWritter
+from utils.operations import GET_IMAGES_FOLDER_PATH, GET_FECHA_INICIO_EJECUCION
+from utils.log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
 
@@ -64,19 +65,22 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                 if is_main_device: 
                     logger.debug(f"Saving confusion matrix")
                 
-                metric.plot(cmap=plt.cm.Blues)                
-                tiempo = str(datetime.now().replace(microsecond=0)).replace(':', '')
+                metric.plot(cmap=plt.cm.Blues)
+                path_images_folder = GET_IMAGES_FOLDER_PATH()
+                fecha = GET_FECHA_INICIO_EJECUCION()
 
                 if is_main_device:
-                    if not os.path.isdir(cons.CONFUSION_MATRIX_FOLDER_NAME):
-                        os.mkdir(cons.CONFUSION_MATRIX_FOLDER_NAME)
+                    if not os.path.isdir(path_images_folder):
+                        os.makedirs(path_images_folder)
+                        #os.mkdir(path_images_folder)
+                        
                             
-                    name_file = f"{tiempo}_{args[cons.MODEL]}_confusion_matrix{cons.CONFUSION_MATRIX_FILE_FORMAT}"
-                    name_file = os.path.join(cons.CONFUSION_MATRIX_FOLDER_NAME, name_file)                
+                    name_file = f"{args[cons.MODEL]}_confusion_matrix{cons.IMAGES_FILE_FORMAT}"
+                    name_file = os.path.join(path_images_folder, name_file)
+
                     plt.savefig(name_file, dpi=600, bbox_inches ='tight')
                 
-        else:
-            
+        else:            
             if is_main_device:
                 logger.debug(f"Other metric")
 
