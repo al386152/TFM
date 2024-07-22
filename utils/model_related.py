@@ -91,39 +91,66 @@ def inference(args: dict, model, dataloaders, device, num_clases):
                       lista_metricas=m.get_list_metrics_with_CM(num_clases, device))
 # -- Fin inference -- #
 
-def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args):
-    model.eval()
-
+def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, nombre_prueba:str="Test"):
+    
     if is_main_device:
         logger.debug(f"evaluate_model - inicio")
     
     num_elementos = len(dataloader)
     log_info_cada = int(num_elementos * cons.TANTO_POR_UNO_LOGS_PRINT) if int(num_elementos * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
+    running_val_loss = 0.0
+
+    model.eval()
 
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(dataloader):
 
             if is_main_device and (i % log_info_cada == 0):
-                info_print = f"Test. Batch: [{i + 1}/{num_elementos}]"
+                info_print = f"{nombre_prueba}. Batch: [{i + 1}/{num_elementos}]"
                 logger.info(info_print)
 
             inputs, labels = inputs.to(device), labels.to(device)
+
+            if is_main_device:
+                logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
+                logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
+
             outputs = model(inputs)
+
+            if is_main_device:
+                logger.debug(f"{nombre_prueba} Outputs shape: {outputs.shape}, {nombre_prueba} Labels shape: {labels.shape}")
+
+            if loss_fn != None:
+                loss = loss_fn(outputs, labels)
+                running_val_loss += loss
 
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
     if is_main_device:
         logger.debug(f"evaluate_model - get metrics")
-    lista_resultados = m.get_metrics(lista_metricas, args=args, save_confusion_matrix=True, is_main_device=is_main_device)    
+
+    dict_resultados = m.get_metrics(lista_metricas, args=args, save_confusion_matrix=save_confusion_matrix, is_main_device=is_main_device)    
     
+    if loss_fn != None:
+        dict_resultados[cons.AVG_LOSS_NAME] = (running_val_loss / (i + 1), running_val_loss)
+
     if is_main_device:
-        logger.info(f"lista_resultados:\n{lista_resultados}")
-        for name, metric in lista_resultados:
-            logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
+        logger.debug(f"dict_resultados:\n{dict_resultados}")
+        for name in dict_resultados:
+            if name == "ConfusionMatrix":
+                info = f"{name}:\n{dict_resultados[name]}"
+            elif name == cons.AVG_LOSS_NAME:
+                avg_loss, _ = dict_resultados[name]
+                info = f"{name}: {avg_loss:.4f}"
+            else:
+                info = f'{name}: {dict_resultados[name]:.4f}'
+            
+            logger.info(info)
+            
 
     m.reset_list_metrics(lista_metricas)
 
-    return lista_resultados
+    return dict_resultados
 # -- Fin evaluate_model -- #
 
 

@@ -46,7 +46,7 @@ def update_metrics(list_metrics: list, outputs, labels):
 
 def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is_main_device=False):
 
-    resultados = list()
+    resultados = dict()
     for i in range(len(list_metrics)):    
         name, metric = list_metrics[i]
         if is_main_device:
@@ -57,7 +57,7 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
             if is_main_device:
                 logger.debug(f"Confusion Matrix")
         
-            resultados.append((name, metric.compute()))
+            resultados[name] =  metric.compute()
 
             if save_confusion_matrix:
                 
@@ -80,7 +80,7 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
             if is_main_device:
                 logger.debug(f"Other metric")
 
-            resultados.append((name, metric.compute().item()))
+            resultados[name] =  metric.compute().item()
     #logger.info(f"Resultados: {resultados}")
     return resultados
 # -- Fin get_metrics -- #

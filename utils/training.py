@@ -4,11 +4,12 @@ import torch
 from torch.distributed import barrier
 
 from datetime import datetime
+
 import utils.constants as cons
 import utils.metrics as m
-from .operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
-
-from .log_writer import getLogWritter
+from utils.operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
+from utils.log_writer import getLogWritter
+from utils.model_related import evaluate_model
 
 logger = getLogWritter(__name__)
 
@@ -37,7 +38,6 @@ def train_one_epoch(model, training_loader, device, estimacion_duracion,
                     loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True, debuging=False):
     
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
-    last_loss = 0
     size_batches = len(training_loader)    
     log_info_cada = int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) if int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
 
@@ -87,7 +87,7 @@ def train_one_epoch(model, training_loader, device, estimacion_duracion,
             estimacion_duracion = (media_est_fin, MULTIPLY_TIME(media_est_fin, size_batches))
 
     # estimacion_duracion cambia de valor en el hilo principal, que es el que muestra los datos, mientras que en el resto de hilos se mantiene igual.
-    return last_loss, estimacion_duracion
+    return estimacion_duracion
 # --  Fin train_one_epoch -- #
 
 def train_model(args: dict, model, dataloaders, is_main_device, device, lista_metricas):
@@ -132,53 +132,18 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
             logger.info(info_print)
 
         model.train(True)
-        avg_loss, est_duracion_batch = train_one_epoch(model=model, device=device, 
+        est_duracion_batch = train_one_epoch(model=model, device=device, 
                                                        training_loader=dataloaders[cons.TRAIN_FOLDER_NAME],  
                                                        loss_func=loss_fn, optimizer=optimizer, 
                                                        estimacion_duracion=est_duracion_batch, 
                                                        is_main_device=is_main_device, 
                                                        debuging=args[cons.SHOW_DEBUG_OUTPUTS])
-        running_val_loss = 0.0
 
-        model.eval()
-            
-        # Disable gradient computation and reduce memory consumption.
-        with torch.no_grad():
-            for i, data in enumerate(dataloaders[cons.VALIDATION_FOLDER_NAME]):                                
-                inputs, labels = data
+        dict_resultados = evaluate_model(model=model, dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], device=device, 
+                                         is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
+                                         loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation")
 
-                inputs, labels = inputs.to(device), labels.to(device)
-
-                if is_main_device:
-                    logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
-                    logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
-
-                outputs = model(inputs)                
-
-                if is_main_device:
-                    logger.debug(f"Validation Outputs shape: {outputs.shape}, Validation Labels shape: {labels.shape}")
-
-                loss = loss_fn(outputs, labels)
-                running_val_loss += loss
-                
-                if is_main_device:
-                    logger.debug(f"inputs:\n{str(inputs)}" )
-                    logger.debug(f"labels:\n{str(labels)}" )
-                    logger.debug(f"outputs:\n{str(outputs)}" )
-                
-                m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
-
-        #lista_resultados = m.get_metrics(lista_metricas, save_confusion_matrix= (epoch == num_epochs-1), is_main_device=is_main_device, args=args)
-        lista_resultados = m.get_metrics(lista_metricas, is_main_device=is_main_device, args=args)
-
-        avg_val_loss = running_val_loss / (i + 1)
-        if is_main_device:
-            logger.info(f"Avg.loss: {avg_loss} | Avg.validation loss: {avg_val_loss}")                    
-
-        if is_main_device:
-            logger.debug(f"Resultados: {lista_resultados}")
-            for name, metric in lista_resultados:
-                logger.info(f'{name}: {metric:.4f}' if name != "ConfusionMatrix" else f"{name}:\n{metric}")
+        avg_val_loss, running_val_loss = dict_resultados[cons.AVG_LOSS_NAME]
 
         if avg_val_loss < best_loss:
             best_loss = avg_val_loss
