@@ -98,11 +98,12 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
         logger.debug(f"evaluate_model - inicio")
     
     num_elementos = len(dataloader)
+    log_info_cada = int(num_elementos * cons.TANTO_POR_UNO_LOGS_PRINT) if int(num_elementos * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
 
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(dataloader):
 
-            if is_main_device:
+            if is_main_device and (i % log_info_cada == 0):
                 info_print = f"Test. Batch: [{i + 1}/{num_elementos}]"
                 logger.info(info_print)
 
