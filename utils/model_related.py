@@ -106,7 +106,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
         for i, (inputs, labels) in enumerate(dataloader):
 
             if is_main_device and (i % log_info_cada == 0):
-                info_print = f"{nombre_prueba}. Batch: [{i + 1}/{num_elementos}]"
+                info_print = f"{nombre_prueba} - Batch: [{i + 1}/{num_elementos}]"
                 logger.info(info_print)
 
             inputs, labels = inputs.to(device), labels.to(device)
