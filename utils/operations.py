@@ -1,4 +1,9 @@
+import os
 from datetime import datetime, timedelta
+from torch import distributed, cuda
+import torch.utils
+
+import utils.constants as cons
 
 def OUTPUT_MODEL_NAME(name:str, number_clases:int)->str:
     return f"model_{name}_{number_clases}_outputs.pth"
@@ -42,3 +47,40 @@ def validate_dataset(dataset, logger):
     for class_idx, count in class_counts.items():
         logger.info(f"Class {dataset.classes[class_idx]} ({class_idx}): {count} samples")
 # -- Fin validate_dataset -- #
+
+# TODO: Revisar esto (seguro que hay una forma mucho mejor de hacerlo)
+def setup_gpu(args:dict, logger):
+
+    # Estableciendo el dispositivo en el que se va a trabajar.
+    device = "cpu"
+    worldsize = 1    
+    if "cuda" in args[cons.DEVICE]:
+        # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.debug(f"cuda in {str(args[cons.DEVICE])}")
+        if not cuda.is_available():
+            if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+                logger.info("'torch.cuda' is not available ==> cpu")            
+            #device = "cpu"
+        else:
+            if args[cons.IS_DISTRIBUTED]:
+                if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+                    logger.info("Setting up distributed gpu") # TODO: pensar en un mensaje mejor para el log
+                distributed.init_process_group(backend=cons.BACKEND)
+                #device = int(os.environ["LOCAL_RANK"])
+                #worldsize = int(os.environ["WORLD_SIZE"])                
+            else:
+                if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+                    logger.info("Setting one gpu") # TODO: pensar en un mensaje mejor para el log
+                device = args[cons.DEVICE]
+    #else: device = "cpu"
+    
+    if args[cons.IS_DISTRIBUTED]:
+        device = int(os.environ["LOCAL_RANK"])
+        worldsize = int(os.environ["WORLD_SIZE"])    
+        cuda.set_device(device)
+    else:
+        device = torch.device(device)
+
+    return device, worldsize
+# -- Fin setup_gpu -- #

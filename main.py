@@ -2,10 +2,6 @@ import os
 
 from datetime import datetime
 
-import torch.utils
-import torch
-
-from torch import distributed, cuda
 
 import utils.arguments_parser as ap
 import utils.constants as cons
@@ -16,50 +12,14 @@ import utils.model_related as mr
 from utils.log_writer import getLogWritter, set_level
 from utils.metrics import  get_list_metrics, get_list_metrics_with_CM, logger as metrics_logger
 from utils.data_loaders import load_datasets, load_data_loaders, logger as dl_logger
+from utils.operations import setup_gpu
 
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
 
-# TODO: Revisar esto (seguro que hay una forma mucho mejor de hacerlo)
-def setup_gpu(args:dict):
-
-    # Estableciendo el dispositivo en el que se va a trabajar.
-    device = "cpu"
-    worldsize = 1    
-    if "cuda" in args[cons.DEVICE]:
-        # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
-        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-            logger.debug(f"cuda in {str(args[cons.DEVICE])}")
-        if not cuda.is_available():
-            if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-                logger.info("'torch.cuda' is not available ==> cpu")            
-            #device = "cpu"
-        else:
-            if args[cons.IS_DISTRIBUTED]:
-                if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-                    logger.info("Setting up distributed gpu") # TODO: pensar en un mensaje mejor para el log
-                distributed.init_process_group(backend=cons.BACKEND)
-                #device = int(os.environ["LOCAL_RANK"])
-                #worldsize = int(os.environ["WORLD_SIZE"])                
-            else:
-                if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-                    logger.info("Setting one gpu") # TODO: pensar en un mensaje mejor para el log
-                device = args[cons.DEVICE]
-    #else: device = "cpu"
-    
-    if args[cons.IS_DISTRIBUTED]:
-        device = int(os.environ["LOCAL_RANK"])
-        worldsize = int(os.environ["WORLD_SIZE"])    
-        cuda.set_device(device)            
-    else:
-        device = torch.device(device)
-
-    return device, worldsize
-# -- Fin setup_gpu -- #
-
 def main(args: dict):    
 
-    device, _ = setup_gpu(args=args)
+    device, _ = setup_gpu(args=args, logger=logger)
 
     is_main_device = (args[cons.IS_DISTRIBUTED] and device == 0) or not args[cons.IS_DISTRIBUTED]
 
@@ -102,15 +62,11 @@ def main(args: dict):
         logger.info(f"{'-' * cons.NUM_GUIONES} Programa finalizado {'-' * cons.NUM_GUIONES}")
 # -- Fin main -- #
 
-# Esto lo hago así porque no se me ha ocurrido de otra forma de poner el nivel correcto a todos los loggers de todos los scripts
-def poner_nivel_a_todos_loggers():
-    lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger]
-    set_level(lista_loggers, cons.loggin_level)
-# -- Fin poner_nivel_a_todos_loggers -- #
-
 if __name__ == "__main__":
     args = ap.get_dict_args()
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-        poner_nivel_a_todos_loggers()   
+    # Esto lo hago así porque no se me ha ocurrido de otra forma de poner el nivel correcto a todos los loggers de todos los scripts
+        lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger]
+        set_level(lista_loggers, cons.loggin_level)
     main(args)
 # -- Fin verdadero main -- #
