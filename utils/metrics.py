@@ -10,35 +10,20 @@ from utils.log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
 
-def _mover_a_dispositivo(lista_metricas, device):
-
-    for _, metrica in lista_metricas:
-        metrica.to(device)
-
 def get_list_metrics(num_classes:int, device, task="multiclass"):
-    lista_metricas = [ 
-             (cons.ACCURACY, Accuracy(task = task, num_classes = num_classes)),
-             (cons.AUROC, AUROC(task = task, num_classes = num_classes)),
-             (cons.AVERAGE_PRECISION, AveragePrecision(task = task, num_classes = num_classes)),
-             (cons.FONE_SCORE, F1Score(task = task, num_classes = num_classes))]
-    
-    _mover_a_dispositivo(lista_metricas, device)
-
-    return lista_metricas
-# -- Fin get_list_metrics -- #
-
-def get_list_metrics_with_CM(num_classes:int, device, task="multiclass"):
     lista_metricas = [ 
             (cons.ACCURACY, Accuracy(task = task, num_classes = num_classes)),
             (cons.AUROC, AUROC(task = task, num_classes = num_classes)),
             (cons.AVERAGE_PRECISION, AveragePrecision(task = task, num_classes = num_classes)),
-            (cons.FONE_SCORE, F1Score(task = task, num_classes = num_classes)),
+            (cons.F_ONE_SCORE, F1Score(task = task, num_classes = num_classes)),
             (cons.CONFUSION_MATRIX, ConfusionMatrix(task = task, num_classes = num_classes))]
     
-    _mover_a_dispositivo(lista_metricas, device)
+    # Moviéndo las métricas al dispositivo que toca.
+    for _, metrica in lista_metricas:
+        metrica.to(device)
 
     return lista_metricas
-# -- Fin get_list_metrics_with_CM -- #
+# -- Fin get_list_metrics -- #
 
 def update_metrics(list_metrics: list, outputs, labels):
     for _, metric in list_metrics:

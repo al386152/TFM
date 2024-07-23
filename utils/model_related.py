@@ -88,7 +88,7 @@ def inference(args: dict, model, dataloaders, device, num_clases):
     #model.eval()    
     evaluate_model(model=model,dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], 
                       device=device, args=args,
-                      lista_metricas=m.get_list_metrics_with_CM(num_clases, device))
+                      lista_metricas=m.get_list_metrics(num_clases, device))
 # -- Fin inference -- #
 
 def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, nombre_prueba:str="Test"):

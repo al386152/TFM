@@ -10,7 +10,7 @@ from utils.log_writer import getLogWritter
 
 from utils.training import train_one_epoch
 import utils.model_related as mr
-from utils.metrics import  get_list_metrics_with_CM
+from utils.metrics import  get_list_metrics
 from utils.data_loaders import load_datasets, load_data_loaders
 from utils.operations import setup_gpu
 
@@ -72,12 +72,10 @@ def objective(trial:optuna.Study):
 
     datasets = load_datasets(args, is_main_device)
     data_loaders = load_data_loaders(args, datasets)
-    #metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
-    metricas = get_list_metrics_with_CM(args[cons.NUMBER_CLASSES], device=device)
+    metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
     if is_main_device: logger.info(f"{'-' * cons.NUM_GUIONES} Iniciando entrenamiento {'-' * cons.NUM_GUIONES}")
-    # TODO: Añadir la parte de entrenamiento (incluida la validación y sacando las métricas)
-
+    
     loss_func = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
     

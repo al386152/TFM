@@ -84,7 +84,7 @@ EPOCH_LOSS = "Epoch loss"
 ACCURACY = "Accuracy"
 AUROC = "AUROC"
 AVERAGE_PRECISION = "Average Precision"
-FONE_SCORE = "F1 Score"
+F_ONE_SCORE = "F1 Score"
 CONFUSION_MATRIX = "Confusion Matrix"
 
 MAIN_METRIC = ACCURACY
