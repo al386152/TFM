@@ -86,6 +86,9 @@ def get_args_parser():
     parser.add_argument(f"--{cons.COLOR_JITTER_HUE}", default="0", type=str, 
                         help=f"Si es un solo número se debe escoger entre [0, 0.5] y el resultado será [-hue, hue]. Si son dos números separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \' (por ejemplo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"), escoger valores en el intervalo [-0.5, 0.5] y el resultado será un número en el intervalo [min, max]")
 
+    parser.add_argument(f"--{cons.IS_HYPERTUNING}", action='store_true', default=False,
+        help="True: Se va a realizar una búsqueda de hiperparámetros.")
+
     return parser
 
 def check_args(args:dict):

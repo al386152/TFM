@@ -22,6 +22,7 @@ COLOR_JITTER_BRIGHTNESS = "brightness"
 COLOR_JITTER_CONTRAST = "contrast" 
 COLOR_JITTER_SATURATION = "saturation"
 COLOR_JITTER_HUE = "hue"
+IS_HYPERTUNING = "hypertuning"
 
 TEST_DATA_PATH = "test_path"
 TRAIN_DATA_PATH = "train_path"
@@ -76,7 +77,22 @@ BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, `
 ROTATION_DEGREES = 30 # Diría que 30º en ambos sentidos es la rotación máxima que podría encontrarse en la vida real
 RANDOM_PERSPECTIVE_DISTORSION_SCALE = 0.15 # No creo que sea buena idea modificar demasiado las imágenes
 
-AVG_LOSS_NAME = "Avg.Loss"
+# Nombres de las Métricas:
+AVG_LOSS = "Avg.Loss"
+EPOCH_LOSS = "Epoch loss"
+
+ACCURACY = "Accuracy"
+AUROC = "AUROC"
+AVERAGE_PRECISION = "Average Precision"
+FONE_SCORE = "F1 Score"
+CONFUSION_MATRIX = "Confusion Matrix"
+
+MAIN_METRIC = ACCURACY
+
+OPTUNA_SEED = 1234
+OPTUNA_TIMEOUT = 60 * 1.5
+OPTUNA_NUMBER_TRIALS = 30
+
 
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]

@@ -10,9 +10,10 @@ from utils.operations import GET_TIME_HMS_FORMAT
 import utils.training as t
 import utils.model_related as mr
 from utils.log_writer import getLogWritter, set_level
-from utils.metrics import  get_list_metrics, get_list_metrics_with_CM, logger as metrics_logger
+from utils.metrics import get_list_metrics_with_CM, logger as metrics_logger
 from utils.data_loaders import load_datasets, load_data_loaders, logger as dl_logger
 from utils.operations import setup_gpu
+from utils.optuna_related import main_optuna
 
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
@@ -68,5 +69,9 @@ if __name__ == "__main__":
     # Esto lo hago así porque no se me ha ocurrido de otra forma de poner el nivel correcto a todos los loggers de todos los scripts
         lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger]
         set_level(lista_loggers, cons.loggin_level)
-    main(args)
+    
+    if args[cons.IS_HYPERTUNING]:
+        main_optuna(args)
+    else:
+        main(args)
 # -- Fin verdadero main -- #
