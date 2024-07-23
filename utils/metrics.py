@@ -17,10 +17,10 @@ def _mover_a_dispositivo(lista_metricas, device):
 
 def get_list_metrics(num_classes:int, device, task="multiclass"):
     lista_metricas = [ 
-             ("Accuracy", Accuracy(task = task, num_classes = num_classes)),
-             ("AUROC", AUROC(task = task, num_classes = num_classes)),
-             ("AveragePrecision", AveragePrecision(task = task, num_classes = num_classes)),
-             ("F1Score", F1Score(task = task, num_classes = num_classes))]
+             (cons.ACCURACY, Accuracy(task = task, num_classes = num_classes)),
+             (cons.AUROC, AUROC(task = task, num_classes = num_classes)),
+             (cons.AVERAGE_PRECISION, AveragePrecision(task = task, num_classes = num_classes)),
+             (cons.FONE_SCORE, F1Score(task = task, num_classes = num_classes))]
     
     _mover_a_dispositivo(lista_metricas, device)
 
@@ -29,11 +29,11 @@ def get_list_metrics(num_classes:int, device, task="multiclass"):
 
 def get_list_metrics_with_CM(num_classes:int, device, task="multiclass"):
     lista_metricas = [ 
-            ("Accuracy", Accuracy(task = task, num_classes = num_classes)),
-            ("AUROC", AUROC(task = task, num_classes = num_classes)),
-            ("AveragePrecision", AveragePrecision(task = task, num_classes = num_classes)),
-            ("F1Score", F1Score(task = task, num_classes = num_classes)),
-            ("ConfusionMatrix", ConfusionMatrix(task = task, num_classes = num_classes))]
+            (cons.ACCURACY, Accuracy(task = task, num_classes = num_classes)),
+            (cons.AUROC, AUROC(task = task, num_classes = num_classes)),
+            (cons.AVERAGE_PRECISION, AveragePrecision(task = task, num_classes = num_classes)),
+            (cons.FONE_SCORE, F1Score(task = task, num_classes = num_classes)),
+            (cons.CONFUSION_MATRIX, ConfusionMatrix(task = task, num_classes = num_classes))]
     
     _mover_a_dispositivo(lista_metricas, device)
 
@@ -53,7 +53,7 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
         if is_main_device:
             logger.debug(f"get_metrics - name: {name}, metric: {metric}")
 
-        if name == "ConfusionMatrix":
+        if name == cons.CONFUSION_MATRIX:
             
             if is_main_device:
                 logger.debug(f"Confusion Matrix")

@@ -96,7 +96,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         logger.info( ('-' * cons.NUM_GUIONES) + "Starting to train the model" + ('-' * cons.NUM_GUIONES) )
 
     # Preparando las variables
-    best_loss = float('inf') # Número imposible para que en la primera iteración sea menor sí o sí.
+    best_metric = float('inf') # Número imposible para que en la primera iteración sea menor sí o sí.
     partial_models_path = args[cons.PARTIAL_MODELS_PATH] 
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -143,10 +143,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
                                          loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation")
 
-        avg_val_loss, running_val_loss = dict_resultados[cons.AVG_LOSS_NAME]
-
-        if avg_val_loss < best_loss:
-            best_loss = avg_val_loss
+        if dict_resultados[cons.MAIN_METRIC] < best_metric:
+            best_metric = dict_resultados[cons.MAIN_METRIC]
             if is_main_device :
                 model_name = f"{args[cons.MODEL]}_{args[cons.NUMBER_CLASSES]}_{timestamp}.pth"
                 model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
@@ -155,12 +153,10 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                 torch.save(model.state_dict(), model_path)
 
         # Para el early stopping
-        if early_stopper.early_stop(running_val_loss):
+        if early_stopper.early_stop(dict_resultados[cons.MAIN_METRIC]):
             if is_main_device:
-                logger.info(f"Stopping the training. Running validation loss: {running_val_loss}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
+                logger.info(f"Stopping the training. {cons.MAIN_METRIC}: {dict_resultados[cons.MAIN_METRIC]}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
             break
-        
-        m.reset_list_metrics(lista_metricas)
 
         if is_main_device:
             logger.debug(f"tiempo_inicio: {str(tiempo_inicio)}")            
@@ -182,3 +178,5 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
 
 # -- Fin train_model -- #
+
+

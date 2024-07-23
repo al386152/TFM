@@ -132,20 +132,14 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     dict_resultados = m.get_metrics(lista_metricas, args=args, save_confusion_matrix=save_confusion_matrix, is_main_device=is_main_device)    
     
     if loss_fn != None:
-        dict_resultados[cons.AVG_LOSS_NAME] = (running_val_loss / (i + 1), running_val_loss)
+        dict_resultados[cons.AVG_LOSS] = running_val_loss / (i + 1) 
+        dict_resultados[cons.EPOCH_LOSS] = running_val_loss
 
     if is_main_device:
         logger.debug(f"dict_resultados:\n{dict_resultados}")
-        for name in dict_resultados:
-            if name == "ConfusionMatrix":
-                info = f"{name}:\n{dict_resultados[name]}"
-            elif name == cons.AVG_LOSS_NAME:
-                avg_loss, _ = dict_resultados[name]
-                info = f"{name}: {avg_loss:.4f}"
-            else:
-                info = f'{name}: {dict_resultados[name]:.4f}'
-            
-            logger.info(info)
+        for name in dict_resultados:            
+            logger.info(f"{name}:\n{dict_resultados[name]}" if name == cons.CONFUSION_MATRIX \
+                        else f"{name}: {dict_resultados[name]:.4f}")
             
 
     m.reset_list_metrics(lista_metricas)
