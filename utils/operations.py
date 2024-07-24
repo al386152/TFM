@@ -5,7 +5,7 @@ import torch.utils
 
 import utils.constants as cons
 
-fecha = str(datetime.now().replace(microsecond=0)).replace(':', '-').replace(' ', '_')
+fecha = datetime.now().replace(microsecond=0)
 
 def OUTPUT_MODEL_NAME(name:str, number_clases:int)->str:
     return f"model_{name}_{number_clases}_outputs.pth"
@@ -89,7 +89,10 @@ def setup_gpu(args:dict, logger):
 
 
 def GET_IMAGES_FOLDER_PATH():
-    return os.path.join(cons.IMAGES_FOLDER_NAME, fecha)
+    return os.path.join(cons.IMAGES_FOLDER_NAME, GET_FECHA_INICIO_EJECUCION_CON_FORMATO())
+
+def GET_FECHA_INICIO_EJECUCION_CON_FORMATO():    
+    return str(fecha.replace(microsecond=0)).replace(':', '-').replace(' ', '_')
 
 def GET_FECHA_INICIO_EJECUCION():
     return fecha

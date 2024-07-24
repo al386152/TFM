@@ -6,7 +6,7 @@ import torch
 
 import utils.constants as cons
 from utils.operations import GET_IMAGES_FOLDER_PATH
-from utils.log_writer import getLogWritter
+from utils.log_writer import getLogWritter, set_level, add_file_handler
 
 from utils.training import train_one_epoch
 import utils.model_related as mr
@@ -25,7 +25,7 @@ def save_plot(args:dict, name:str):
     if not os.path.isdir(path_images_folder):
         os.mkdir(path_images_folder)
             
-    name_file = f"{args[cons.MODEL]}_{name}{cons.IMAGES_FILE_FORMAT}"
+    name_file = f"{name}{cons.IMAGES_FILE_FORMAT}"
     name_file = os.path.join(path_images_folder, name_file)
 
     plt.savefig(name_file, dpi=600, bbox_inches ='tight')
@@ -49,36 +49,47 @@ def show_and_save_results(study:optuna.Study, args:dict):
     save_plot(args=args, name="Hyperparameters_Importances")
     optuna.visualization.matplotlib.plot_edf(study)
     save_plot(args=args, name="Empirical Distribution Function")
+    # Nota: Al parecer, "plot_rank" es experimental
     optuna.visualization.matplotlib.plot_rank(study)
     save_plot(args=args, name="Rank")
     optuna.visualization.matplotlib.plot_timeline(study)
     save_plot(args=args, name="Time_Plot")
 # -- FIN save_plot -- #
 
-# TODO: Por comprobar de que vaya bien.
-def objective(trial:optuna.Study):
+# TODO: Por comprobar de que vaya bien en paralelo.
+# https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_simple.py
+# https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
+def objective(trial:optuna.Trial):
     
     args = ARGS
-
-    if is_main_device: logger.info(f"trial:\n{str(trial)}")        
-    device, _ = setup_gpu(args=args, logger=logger)
+            
+    device, _ = setup_gpu(args=args, logger=logger)    
 
     is_main_device = (args[cons.IS_DISTRIBUTED] and device == 0) or not args[cons.IS_DISTRIBUTED]
 
     if is_main_device: logger.info(f"Device: {device}")
 
+    # Selección de los hiperparámetros de Optuna
+    args[cons.MODEL] = trial.suggest_categorical("model", cons.POSSIBLE_MODELS)
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+
     if is_main_device: logger.info(f"Model: {model}")
+
+    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)            
+    optimizer_name = trial.suggest_categorical("optimizer", cons.POSSIBLE_OPTIMIZERS)    
+    optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
+
+    if is_main_device: logger.info(f"Optimizer: {optimizer_name}, lr: {lr}")
+    # --
 
     datasets = load_datasets(args, is_main_device)
     data_loaders = load_data_loaders(args, datasets)
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
     if is_main_device: logger.info(f"{'-' * cons.NUM_GUIONES} Iniciando entrenamiento {'-' * cons.NUM_GUIONES}")
-    
-    loss_func = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
-    
+
+    loss_func = torch.nn.CrossEntropyLoss()    
+
     num_epochs = args[cons.EPOCS]
     # Entrenando
     for epoch in range(num_epochs):
@@ -109,13 +120,25 @@ def main_optuna(args:dict):
     global ARGS
 
     ARGS = args    
-    
+    is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0)    
+
     study = optuna.create_study(
         direction="maximize",
         sampler=optuna.samplers.TPESampler(seed=cons.OPTUNA_SEED),
         pruner=optuna.pruners.MedianPruner(),
         )
-    study.optimize(objective, n_trials = cons.OPTUNA_NUMBER_TRIALS, timeout = cons.OPTUNA_TIMEOUT)
     
+    add_file_handler(loggers = [optuna.logging.get_logger("optuna")])
+    set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level)
+    
+    study.optimize(objective, n_trials = cons.OPTUNA_NUMBER_TRIALS, timeout = cons.OPTUNA_TIMEOUT)    
+
+    if is_main_device:
+        show_and_save_results(study, args)
+        info = '\n'.join([f"Number finished trials: {len(study.trials)}\n", 
+                          f"Best trial:\n{study.best_trial}\n",
+                          f"- {cons.MAIN_METRIC} value: {study.best_trial.value}\n",
+                          f"- Parameters:\n{study.best_trial.params}"])                
+        logger.info(info)
 
 # -- FIN main_optuna -- #

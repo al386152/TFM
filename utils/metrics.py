@@ -5,7 +5,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 import utils.constants as cons
-from utils.operations import GET_IMAGES_FOLDER_PATH, GET_FECHA_INICIO_EJECUCION
+from utils.operations import GET_IMAGES_FOLDER_PATH
 from utils.log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
@@ -52,7 +52,6 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                 
                 metric.plot(cmap=plt.cm.Blues)
                 path_images_folder = GET_IMAGES_FOLDER_PATH()
-                fecha = GET_FECHA_INICIO_EJECUCION()
 
                 if is_main_device:
                     if not os.path.isdir(path_images_folder):

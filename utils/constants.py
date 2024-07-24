@@ -23,15 +23,12 @@ COLOR_JITTER_CONTRAST = "contrast"
 COLOR_JITTER_SATURATION = "saturation"
 COLOR_JITTER_HUE = "hue"
 IS_HYPERTUNING = "hypertuning"
+OPTIMIZER = "optimizer"
 
 TEST_DATA_PATH = "test_path"
 TRAIN_DATA_PATH = "train_path"
 VALIDATION_DATA_PATH = "val_path"
 SPLIT_PERCENTAGES = "split_perc"
-
-#DROP_PATH = "drop_path"
-#WEIGTH_DECAY = "weight_decay"
-#WARMUP_EPOCHS = "warmup_epochs"
 
 TEST_FOLDER_NAME = "test"
 VALIDATION_FOLDER_NAME = "val"
@@ -71,6 +68,8 @@ SWITCH_MODELOS = {
 
 POSSIBLE_MODELS = SWITCH_MODELOS.keys()
 DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
+
+POSSIBLE_OPTIMIZERS = ["Adam", "AdamW", "SGD"]
 
 BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
 

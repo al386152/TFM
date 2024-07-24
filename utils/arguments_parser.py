@@ -88,6 +88,9 @@ def get_args_parser():
 
     parser.add_argument(f"--{cons.IS_HYPERTUNING}", action='store_true', default=False,
         help="True: Se va a realizar una búsqueda de hiperparámetros.")
+    
+    parser.add_argument(f"--{cons.OPTIMIZER}", default="SGD", type=str, 
+                        help=f"Optimizer's name. Options: {str(cons.POSSIBLE_OPTIMIZERS).replace('[', '').replace(']', '')}")
 
     return parser
 
