@@ -18,9 +18,6 @@ def prepare_log_file() -> str:
 
     log_name = f"{str(the_date.time()).replace(':', '-')}_{cons.BASE_LOG_FILE_NAME}.log"
 
-    print(f"==> log_path_with_date: {log_path_with_date}")
-    print(f"==> log_name: {log_name}")
-
     return log_path_with_date, log_name
 
 def set_level(loggers: List[logging.Logger], level):

@@ -23,7 +23,8 @@ def save_plot(args:dict, name:str):
     path_images_folder = GET_IMAGES_FOLDER_PATH()
 
     if not os.path.isdir(path_images_folder):
-        os.mkdir(path_images_folder)
+        #os.mkdir(path_images_folder)
+        os.makedirs(path_images_folder)
             
     name_file = f"{name}{cons.IMAGES_FILE_FORMAT}"
     name_file = os.path.join(path_images_folder, name_file)
@@ -62,8 +63,12 @@ def show_and_save_results(study:optuna.Study, args:dict):
 def objective(trial:optuna.Trial):
     
     args = ARGS
-            
-    device, _ = setup_gpu(args=args, logger=logger)    
+
+    # Ojo: Cambio importante respecto de la versión normal
+    device = args[cons.DEVICE]        
+
+    if args[cons.IS_DISTRIBUTED]:
+        trial = optuna.integration.TorchDistributedTrial(trial)
 
     is_main_device = (args[cons.IS_DISTRIBUTED] and device == 0) or not args[cons.IS_DISTRIBUTED]
 
@@ -119,26 +124,41 @@ def objective(trial:optuna.Trial):
 def main_optuna(args:dict):    
     global ARGS
 
-    ARGS = args    
-    is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0)    
+    ARGS = args
 
-    study = optuna.create_study(
-        direction="maximize",
-        sampler=optuna.samplers.TPESampler(seed=cons.OPTUNA_SEED),
-        pruner=optuna.pruners.MedianPruner(),
-        )
-    
-    add_file_handler(loggers = [optuna.logging.get_logger("optuna")])
-    set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level)
-    
-    study.optimize(objective, n_trials = cons.OPTUNA_NUMBER_TRIALS, timeout = cons.OPTUNA_TIMEOUT)    
+    is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0)   
 
+    # Ojo: cambio importante respecto de la versión normal
+    device, _ = setup_gpu(args=args, logger=logger)            
+    args[cons.DEVICE] = device
+    
+    # Por lo que veo aquí: https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
+    #   solo el hilo principal se encarga de poner en marcha la optimización y dentro es en donde se hace el paralelismo (entiendo)
     if is_main_device:
+        study = optuna.create_study(
+            direction="maximize",
+            sampler=optuna.samplers.TPESampler(seed=cons.OPTUNA_SEED),
+            pruner=optuna.pruners.MedianPruner(),
+            )
+        
+        # Para que la salida de optuna se guarde en el log.
+        add_file_handler(loggers = [optuna.logging.get_logger("optuna")])
+        set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level)
+        
+        study.optimize(objective, n_trials = cons.OPTUNA_NUMBER_TRIALS, timeout = cons.OPTUNA_TIMEOUT)    
+
         show_and_save_results(study, args)
         info = '\n'.join([f"Number finished trials: {len(study.trials)}\n", 
                           f"Best trial:\n{study.best_trial}\n",
                           f"- {cons.MAIN_METRIC} value: {study.best_trial.value}\n",
                           f"- Parameters:\n{study.best_trial.params}"])                
         logger.info(info)
+    else:
+        # Mirar esto.
+        for _ in range(cons.OPTUNA_NUMBER_TRIALS):
+            try:        
+                objective(None)
+            except optuna.TrialPruned:
+                pass
 
 # -- FIN main_optuna -- #

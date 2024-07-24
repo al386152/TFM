@@ -49,8 +49,8 @@ def train_one_epoch(model, training_loader, device, estimacion_duracion,
         if is_main_device:
             tiempo_inicio = datetime.now()
             if debuging or (i % log_info_cada == 0):
-                info_print = f"Batch: [{i + 1}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
-                logger.info(f"{info_print}")
+                info = f"Batch: [{i + 1}/{size_batches}] - {estimacion_fin} || {estimacion_fin_todos}"
+                logger.info(f"{info}")
 
         inputs, labels = data
         inputs, labels = inputs.to(device), labels.to(device)
@@ -128,8 +128,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         
         if is_main_device:
             tiempo_inicio = datetime.now()
-            info_print = f"Epoch: [{epoch + 1}/{num_epochs}] - {estimacion_fin} || {estimacion_fin_todos}\n"
-            logger.info(info_print)
+            info = f"Epoch: [{epoch + 1}/{num_epochs}] - {estimacion_fin} || {estimacion_fin_todos}\n"
+            logger.info(info)
 
         model.train(True)
         est_duracion_batch = train_one_epoch(model=model, device=device, 
@@ -178,5 +178,3 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
 
 # -- Fin train_model -- #
-
-

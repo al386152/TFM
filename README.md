@@ -18,6 +18,10 @@ python3 ./main.py --batch_size 64 --epochs 1 --device cpu  --data_path "/home/us
 python3 ./main.py --batch_size 16 --epochs 50 --device cpu  --data_path "/home/usuario/Documentos/Retinopatía Diabética/Datasets/MESSIDOR2" --model "resnet50" --num_classes 5 --model_weights "./model_vgg19_5_outputs.pth" 
 ```
 
+```
+python3 ./main.py --batch_size 64 --epochs 1 --device cpu --data_path "/home/usuario/Documentos/Retinopatía Diabética/Datasets/IDRiD/train"  --model "resnet50" --num_classes 5 --split_perc "60,20,20" --hypertuning
+```
+
 Para realizar el entrenamiento entre varias GPUS
 ```
 python3 -m torch.distributed.launch --use_env --nproc_per_node=$num_graficas ./main.py \
