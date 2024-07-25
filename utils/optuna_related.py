@@ -12,7 +12,7 @@ from utils.training import train_one_epoch
 import utils.model_related as mr
 from utils.metrics import  get_list_metrics
 from utils.data_loaders import load_datasets, load_data_loaders
-from utils.operations import setup_gpu
+from utils.operations import setup_gpu, cleanup
 
 logger = getLogWritter(__name__)
 ARGS = None
@@ -132,15 +132,16 @@ def main_optuna(args:dict):
     device, _ = setup_gpu(args=args, logger=logger)            
     args[cons.DEVICE] = device
     
-    # Por lo que veo aquí: https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
-    #   solo el hilo principal se encarga de poner en marcha la optimización y dentro es en donde se hace el paralelismo (entiendo)
+    # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
     if is_main_device:
         study = optuna.create_study(
+            study_name="Optimización",
             direction="maximize",
             sampler=optuna.samplers.TPESampler(seed=cons.OPTUNA_SEED),
             pruner=optuna.pruners.MedianPruner(),
             )
-        
+        # TODO: En los ejemplos había algo de un timeout
+
         # Para que la salida de optuna se guarde en el log.
         add_file_handler(loggers = [optuna.logging.get_logger("optuna")])
         set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level)
@@ -155,10 +156,15 @@ def main_optuna(args:dict):
         logger.info(info)
     else:
         # Mirar esto.
-        for _ in range(cons.OPTUNA_NUMBER_TRIALS):
+        for i in range(cons.OPTUNA_NUMBER_TRIALS):
             try:        
                 objective(None)
             except optuna.TrialPruned:
                 pass
+    
+    if args[cons.IS_DISTRIBUTED]:
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.debug("- cleanup -")
+        cleanup()
 
 # -- FIN main_optuna -- #

@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from torch import distributed, cuda
+import torch.distributed
 import torch.utils
 
 import utils.constants as cons
@@ -90,9 +91,18 @@ def setup_gpu(args:dict, logger):
 
 def GET_IMAGES_FOLDER_PATH():
     return os.path.join(cons.IMAGES_FOLDER_NAME, GET_FECHA_INICIO_EJECUCION_CON_FORMATO())
+# -- Fin GET_IMAGES_FOLDER_PATH -- #
 
 def GET_FECHA_INICIO_EJECUCION_CON_FORMATO():    
     return str(fecha.replace(microsecond=0)).replace(':', '-').replace(' ', '_')
+# -- Fin GET_FECHA_INICIO_EJECUCION_CON_FORMATO -- #
 
 def GET_FECHA_INICIO_EJECUCION():
     return fecha
+# -- Fin GET_FECHA_INICIO_EJECUCION -- #
+
+# https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_spawn.py
+def cleanup():
+    torch.distributed.barrier()
+    torch.distributed.destroy_process_group()
+# -- Fin cleanup -- # 
