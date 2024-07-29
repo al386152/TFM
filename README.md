@@ -34,6 +34,17 @@ python3 -m torch.distributed.launch --use_env --nproc_per_node=$num_graficas ./m
                             --patience 5
 ```
 
+```
+srun time python3 -m torch.distributed.launch --nproc_per_node=$num_graficas --use_env ./main.py \
+                            --batch_size $batch_size \
+                            --epochs $num_epochs \
+                            --device cuda  \
+                            --data_path "$ruta_datasets/$name_dataset" \
+                            --model $model \
+                            --hypertuning  \
+                            --is_distributed
+```
+
 # Desinstalación
 ```
 conda remove -n proyecto --all
