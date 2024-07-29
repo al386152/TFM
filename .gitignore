@@ -1,8 +1,7 @@
-Summaries
-Proyecto*
+_*
 partial_models
 model*
-__otros
 logs
 confusion_matrix
 result_images
+*__pycache__*
