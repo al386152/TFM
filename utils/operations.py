@@ -102,7 +102,7 @@ def GET_FECHA_INICIO_EJECUCION():
 # -- Fin GET_FECHA_INICIO_EJECUCION -- #
 
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_spawn.py
-def cleanup():
+def cleanup():    
     torch.distributed.barrier()
     torch.distributed.destroy_process_group()
 # -- Fin cleanup -- # 

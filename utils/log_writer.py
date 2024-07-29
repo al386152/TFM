@@ -26,7 +26,6 @@ def set_level(loggers: List[logging.Logger], level):
         for handler in logger.handlers:
             handler.setLevel(level)
 
-# TODO: Finalizar esto.
 def add_file_handler(loggers: List[logging.Logger]):
     
     log_path_with_date, log_name = prepare_log_file()

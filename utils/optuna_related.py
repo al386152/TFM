@@ -3,6 +3,7 @@ import optuna
 import os
 import matplotlib.pyplot as plt
 import torch
+import torch.distributed
 
 import utils.constants as cons
 from utils.operations import GET_IMAGES_FOLDER_PATH
@@ -57,18 +58,19 @@ def show_and_save_results(study:optuna.Study, args:dict):
     save_plot(args=args, name="Time_Plot")
 # -- FIN save_plot -- #
 
-# TODO: Por comprobar de que vaya bien en paralelo.
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_simple.py
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
 def objective(trial:optuna.Trial):
-    
+        
     args = ARGS
 
     # Ojo: Cambio importante respecto de la versión normal
     device = args[cons.DEVICE]        
 
     if args[cons.IS_DISTRIBUTED]:
+        # Nota: Al parecer, "TorchDistributedTrial" es experimental
         trial = optuna.integration.TorchDistributedTrial(trial)
+        torch.distributed.barrier()
 
     is_main_device = (args[cons.IS_DISTRIBUTED] and device == 0) or not args[cons.IS_DISTRIBUTED]
 
@@ -138,15 +140,14 @@ def main_optuna(args:dict):
             study_name="Optimización",
             direction="maximize",
             sampler=optuna.samplers.TPESampler(seed=cons.OPTUNA_SEED),
-            pruner=optuna.pruners.MedianPruner(),
+            pruner=optuna.pruners.MedianPruner()            
             )
-        # TODO: En los ejemplos había algo de un timeout
 
         # Para que la salida de optuna se guarde en el log.
         add_file_handler(loggers = [optuna.logging.get_logger("optuna")])
-        set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level)
-        
-        study.optimize(objective, n_trials = cons.OPTUNA_NUMBER_TRIALS, timeout = cons.OPTUNA_TIMEOUT)    
+        set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level)  
+
+        study.optimize(objective, n_trials = cons.OPTUNA_NUMBER_TRIALS)
 
         show_and_save_results(study, args)
         info = '\n'.join([f"Number finished trials: {len(study.trials)}\n", 
@@ -155,8 +156,8 @@ def main_optuna(args:dict):
                           f"- Parameters:\n{study.best_trial.params}"])                
         logger.info(info)
     else:
-        # Mirar esto.
-        for i in range(cons.OPTUNA_NUMBER_TRIALS):
+        # El fallo se daba porque el hilo principal acababa por el timeout pero el secundario esperaba al principal.
+        for _ in range(cons.OPTUNA_NUMBER_TRIALS):
             try:        
                 objective(None)
             except optuna.TrialPruned:
@@ -164,7 +165,7 @@ def main_optuna(args:dict):
     
     if args[cons.IS_DISTRIBUTED]:
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-            logger.debug("- cleanup -")
+            logger.debug("- cleanup -")        
         cleanup()
 
 # -- FIN main_optuna -- #

@@ -89,9 +89,11 @@ CONFUSION_MATRIX = "Confusion Matrix"
 MAIN_METRIC = ACCURACY
 
 OPTUNA_SEED = 1234
-OPTUNA_TIMEOUT = 60 * 1.5
 OPTUNA_NUMBER_TRIALS = 30
 
+# Nota: el timeout tiene que ser el mismo para todos los hilos ==> uno acaba, el resto espera al que ha acabado ==> no se acaba nunca.
+#   Por otra parte, puesto que no sé bien cómo ponerlo, prefiero no ponerlo.
+#OPTUNA_TIMEOUT = None #60 * 5 # Es en segundos (None: todo el tiempo que necesite)
 
 # Esto no es del todo una constante, pero bueno:
 loggin_level = _levelToName[INFO]
