@@ -1,6 +1,6 @@
 _*
 partial_models
-model*
+*.pth
 logs
 confusion_matrix
 result_images
