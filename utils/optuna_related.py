@@ -4,6 +4,10 @@ import os
 import matplotlib.pyplot as plt
 import torch
 import torch.distributed
+from torchvision.transforms import v2
+
+from typing import Dict, Any
+from torchvision.datasets import ImageFolder
 
 import utils.constants as cons
 from utils.operations import GET_IMAGES_FOLDER_PATH
@@ -58,6 +62,68 @@ def show_and_save_results(study:optuna.Study, args:dict):
     save_plot(args=args, name="Time_Plot")
 # -- FIN save_plot -- #
 
+# TODO: Comprobar de que vaya
+def modify_model_layers(model:torch.nn.Module, model_name:str, trial:optuna.Trial):
+
+    mod_classifier_layer = list()
+
+    if trial.suggest_categorical("BatchNorm2D pseudo_bool", [True, False]):
+        mod_classifier_layer.append(torch.nn.BatchNorm2d())
+    
+    if trial.suggest_categorical("LayerNorm pseudo_bool", [True, False]):
+        mod_classifier_layer.append(torch.nn.LayerNorm())    
+
+    if "vgg" in model_name:
+        # Capas de Dropout (de base, p=0.5)
+        model.classifier[2] = torch.nn.Dropout(p = trial.suggest_float(name="p droput", low=0, high=0.5, step=0.1))
+        model.classifier[4] = torch.nn.Dropout(p = trial.suggest_float(name="p droput", low=0, high=0.5, step=0.1))
+
+        mod_classifier_layer.append(model.classifier[6])
+
+        model.classifier[6] = torch.nn.Sequential(*mod_classifier_layer)
+
+    elif "resnet" in model_name:
+        
+        mod_classifier_layer.append(torch.nn.Dropout(p = trial.suggest_float(name="p droput", low=0, high=0.2, step=0.1)))
+        mod_classifier_layer.append(model.fc)
+
+        model.fc = torch.nn.Sequential(*mod_classifier_layer)
+    elif "densenet" in model_name:
+
+        mod_classifier_layer.append(torch.nn.Dropout(p = trial.suggest_float(name="p droput", low=0, high=0.2, step=0.1)))
+        mod_classifier_layer.append(model.classifier)
+
+        model.classifier = torch.nn.Sequential(*mod_classifier_layer)
+# -- FIN modify_model_layers -- #
+
+def modify_transformations(dict_datasets:Dict[str, ImageFolder], trial:optuna.Trial):
+
+    print(f"dict_datasets:\n{dict_datasets}")
+
+    dict_datasets[cons.TRAIN_FOLDER_NAME].transform = v2.Compose([
+        v2.PILToTensor(),
+
+        v2.Resize((trial.suggest_int(name="Tranform_Resize_altura", low=224, high=824, step=300), 
+                   trial.suggest_int(name="Tranform_Resize_anchura", low=224, high=824, step=300))),
+        
+        v2.RandomHorizontalFlip(p=trial.suggest_float(name="Transform_RandomHorizontalFlip", low=0, high=1, step=0.2)),
+        
+        v2.RandomVerticalFlip(p=trial.suggest_float(name="Transform_RandomVerticalFlip", low=0, high=1, step=0.2)),
+        
+        v2.RandomPerspective(distortion_scale=trial.suggest_float(name="Transform_RandomPerspective", low=0, high=0.9, step=0.15)), 
+        
+        v2.RandomRotation(degrees=trial.suggest_int(name="Transform_RandomRotation", low=0, high=90, step=15)),
+
+        v2.ColorJitter(brightness=trial.suggest_float(name="ColorJitter_brightness", low=0.0, high=1.0, step=0.1),
+                       contrast=trial.suggest_float(name="ColorJitter_contrast", low=0.0, high=1.0, step=0.1),
+                       saturation=trial.suggest_float(name="ColorJitter_saturation", low=0.0, high=1.0, step=0.1),
+                       hue=trial.suggest_float(name="ColorJitter_hue", low=-0.5, high=0.5, step=0.1)),
+
+        v2.ToDtype(torch.float32, scale=True)
+    ])
+# -- FIN modify_transformations -- #
+
+
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_simple.py
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
 def objective(trial:optuna.Trial):
@@ -76,20 +142,25 @@ def objective(trial:optuna.Trial):
 
     if is_main_device: logger.info(f"Device: {device}")
 
+    datasets = load_datasets(args, is_main_device)
+
     # Selección de los hiperparámetros de Optuna
     args[cons.MODEL] = trial.suggest_categorical("model", cons.POSSIBLE_MODELS)
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+    
+    modify_model_layers(model=model, model_name=args[cons.MODEL], trial=trial)
+    if is_main_device: logger.info(f"Model: {model}")    
 
-    if is_main_device: logger.info(f"Model: {model}")
+    modify_transformations(datasets, trial)
 
-    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)            
-    optimizer_name = trial.suggest_categorical("optimizer", cons.POSSIBLE_OPTIMIZERS)    
+    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
+    optimizer_name = trial.suggest_categorical("optimizer", cons.POSSIBLE_OPTIMIZERS)
     optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
+    args[cons.BATCH_SIZE] = trial.suggest_int("Batch size", 12, 48, step=6) # Esto se utiliza en "load_data_loaders"
 
     if is_main_device: logger.info(f"Optimizer: {optimizer_name}, lr: {lr}")
     # --
 
-    datasets = load_datasets(args, is_main_device)
     data_loaders = load_data_loaders(args, datasets)
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
@@ -130,7 +201,7 @@ def main_optuna(args:dict):
 
     is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0)   
 
-    # Ojo: cambio importante respecto de la versión normal
+    # Cambio importante respecto de la versión normal
     device, _ = setup_gpu(args=args, logger=logger)            
     args[cons.DEVICE] = device
     
