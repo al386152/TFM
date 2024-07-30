@@ -98,8 +98,6 @@ def modify_model_layers(model:torch.nn.Module, model_name:str, trial:optuna.Tria
 
 def modify_transformations(dict_datasets:Dict[str, ImageFolder], trial:optuna.Trial):
 
-    print(f"dict_datasets:\n{dict_datasets}")
-
     dict_datasets[cons.TRAIN_FOLDER_NAME].transform = v2.Compose([
         v2.PILToTensor(),
 
