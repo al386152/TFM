@@ -1,7 +1,7 @@
 import os
 
 from datetime import datetime
-
+from torch.nn.parallel import DistributedDataParallel
 
 import utils.arguments_parser as ap
 import utils.constants as cons
@@ -28,6 +28,8 @@ def main(args: dict):
         logger.info(f"Device: {device}")
 
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+    if args[cons.IS_DISTRIBUTED]:
+        model = DistributedDataParallel(model, device_ids=[device])
     if is_main_device:
         logger.info(f"Model: {model}")
 

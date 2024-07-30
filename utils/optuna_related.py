@@ -6,7 +6,8 @@ import torch
 import torch.distributed
 from torchvision.transforms import v2
 
-from typing import Dict, Any
+from torch.nn.parallel import DistributedDataParallel
+from typing import Dict
 from torchvision.datasets import ImageFolder
 
 import utils.constants as cons
@@ -67,6 +68,8 @@ def modify_model_layers(model:torch.nn.Module, model_name:str, trial:optuna.Tria
 
     mod_classifier_layer = list()
 
+    # TODO: missing 1 required positional argument: 'num_features'
+    # TODO: Revisar el resto de capas también.
     if trial.suggest_categorical("BatchNorm2D pseudo_bool", [True, False]):
         mod_classifier_layer.append(torch.nn.BatchNorm2d())
     
@@ -158,6 +161,8 @@ def objective(trial:optuna.Trial):
 
     if is_main_device: logger.info(f"Optimizer: {optimizer_name}, lr: {lr}")
     # --
+    if args[cons.IS_DISTRIBUTED]:
+        model = DistributedDataParallel(model, device_ids=[device])
 
     data_loaders = load_data_loaders(args, datasets)
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)

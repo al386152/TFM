@@ -6,10 +6,7 @@ import utils.constants as cons
 import utils.metrics as m
 from .operations import OUTPUT_MODEL_NAME
 from .log_writer import getLogWritter
-from .operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
 
-from datetime import datetime
-from torch.nn.parallel import DistributedDataParallel
 
 logger = getLogWritter(__name__)
 
@@ -179,8 +176,7 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
     model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
 
     model = model.to(device)
-    if args[cons.IS_DISTRIBUTED]:
-        model = DistributedDataParallel(model, device_ids=[device])
+    #if args[cons.IS_DISTRIBUTED]: model = DistributedDataParallel(model, device_ids=[device])
 
     return model
 # -- Fin load_model -- #
