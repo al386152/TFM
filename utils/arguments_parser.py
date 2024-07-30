@@ -21,10 +21,6 @@ def get_args_parser():
                     help=f"Usos:\n\t-Un solo número: imagen cuadrada.\n\tDos números separados por \'{cons.SEPARADOR_INPUT_IMAGENES}\': [altura de la imagen]{cons.SEPARADOR_INPUT_IMAGENES}[anchura de la imagen]"+
                          f"Ejemplos: 224 ==> Imagen cuadrada de 224x224. 512{cons.SEPARADOR_INPUT_IMAGENES}214: Imagen de 512 de altura y 214 de anchura"
                             )
-                           
-    #parser.add_argument(f"--{cons.DROP_PATH}", type=float, default=0.1, help="Drop path rate (default: 0.1)")
-    #parser.add_argument(f"--{cons.WEIGTH_DECAY}", type=float, default=0.05, help="weight decay (default: 0.05)")
-    #parser.add_argument(f"--{cons.WARMUP_EPOCHS}", type=int, default=10, help="epochs to warmup LR")
 
     parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=0.001, help="learning rate")
 

@@ -108,22 +108,16 @@ def load_dataset_two_paths(args:dict, is_main_device, transform:v2.Compose, trai
 
     return dict_datasets
 
-def load_datasets(args:dict, is_main_device) -> dict:
-
-    if is_main_device:
-        logger.debug("load_datasets")
-
-    # Transformaciones de las imagens de Validación y Prueba
-    transform = v2.Compose([
+def get_validation_test_transform(args):
+    return v2.Compose([
         v2.PILToTensor(),        
         v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
         v2.ToDtype(torch.float32, scale=True), 
-    ]) 
+    ])
 
-    if is_main_device:
-        logger.debug(f"transform created:\n{transform}")
-
-    training_transform = v2.Compose([        
+def get_training_transform(args):
+    # Nota: si añades alguna más, métela también en "optuna_related" para que haga la prueba.
+    return v2.Compose([        
         v2.PILToTensor(),
         v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),        
         v2.RandomHorizontalFlip(), # Probabilidad de 0.5 (no me parece nesario poner una variable)
@@ -134,7 +128,20 @@ def load_datasets(args:dict, is_main_device) -> dict:
                        saturation=args[cons.COLOR_JITTER_SATURATION], hue=args[cons.COLOR_JITTER_HUE]),         
         # NOTA: Para hacer el aumento de datos MODIFICAR AQUÍ ==>
         v2.ToDtype(torch.float32, scale=True),
-    ])     
+    ])
+
+def load_datasets(args:dict, is_main_device) -> dict:
+
+    if is_main_device:
+        logger.debug("load_datasets")
+
+    # Transformaciones de las imagens de Validación y Prueba
+    transform = get_validation_test_transform(args)
+
+    if is_main_device:
+        logger.debug(f"transform created:\n{transform}")
+
+    training_transform = get_training_transform(args)    
     
     if is_main_device:
         logger.debug(f"transform created:\n{training_transform}")
