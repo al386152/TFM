@@ -28,8 +28,10 @@ def main(args: dict):
         logger.info(f"Device: {device}")
 
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+    model = model.to(device)
     if args[cons.IS_DISTRIBUTED]:
-        model = DistributedDataParallel(model, device_ids=[device])
+        model = DistributedDataParallel(model, device_ids=[device])        
+
     if is_main_device:
         logger.info(f"Model: {model}")
 

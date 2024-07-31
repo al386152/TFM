@@ -68,13 +68,16 @@ def modify_model_layers(model:torch.nn.Module, model_name:str, trial:optuna.Tria
 
     mod_classifier_layer = list()
 
+    classifier_layer = mr.get_classifier_layer(model, model_name)
+
+    num_ftrs = classifier_layer.in_features
     # TODO: missing 1 required positional argument: 'num_features'
     # TODO: Revisar el resto de capas también.
     if trial.suggest_categorical("BatchNorm2D pseudo_bool", [True, False]):
-        mod_classifier_layer.append(torch.nn.BatchNorm2d())
+        mod_classifier_layer.append(torch.nn.BatchNorm1d(num_features=num_ftrs))
     
     if trial.suggest_categorical("LayerNorm pseudo_bool", [True, False]):
-        mod_classifier_layer.append(torch.nn.LayerNorm())    
+        mod_classifier_layer.append(torch.nn.LayerNorm(normalized_shape=num_ftrs))    
 
     if "vgg" in model_name:
         # Capas de Dropout (de base, p=0.5)
@@ -118,7 +121,7 @@ def modify_transformations(dict_datasets:Dict[str, ImageFolder], trial:optuna.Tr
         v2.ColorJitter(brightness=trial.suggest_float(name="ColorJitter_brightness", low=0.0, high=1.0, step=0.1),
                        contrast=trial.suggest_float(name="ColorJitter_contrast", low=0.0, high=1.0, step=0.1),
                        saturation=trial.suggest_float(name="ColorJitter_saturation", low=0.0, high=1.0, step=0.1),
-                       hue=trial.suggest_float(name="ColorJitter_hue", low=-0.5, high=0.5, step=0.1)),
+                       hue=trial.suggest_float(name="ColorJitter_hue", low=0.0, high=0.5, step=0.1)),
 
         v2.ToDtype(torch.float32, scale=True)
     ])
@@ -161,8 +164,9 @@ def objective(trial:optuna.Trial):
 
     if is_main_device: logger.info(f"Optimizer: {optimizer_name}, lr: {lr}")
     # --
+    model = model.to(device)
     if args[cons.IS_DISTRIBUTED]:
-        model = DistributedDataParallel(model, device_ids=[device])
+        model = DistributedDataParallel(model, device_ids=[device])        
 
     data_loaders = load_data_loaders(args, datasets)
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)

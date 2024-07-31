@@ -33,12 +33,7 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1, is_m
     return model
 # -- Fin transfer_learning -- #
 
-# https://github.com/munniomer/pytorch-tutorials/blob/master/beginner_source/finetuning_torchvision_models_tutorial.py
-def fine_tuning(model, model_name, outputs, is_main_device):
-    
-    if is_main_device:
-        logger.info("Adding fine-tuning layers")                        
-    
+def get_classifier_layer(model: torch.nn.Module, model_name: str, is_main_device: bool=False)->torch.nn.modules.linear.Linear:
     #if model_name == "vgg19":
     if "vgg" in model_name:
         classifier_layer = model.classifier[6]        
@@ -51,6 +46,17 @@ def fine_tuning(model, model_name, outputs, is_main_device):
         if is_main_device: 
             logger.warning(f"Han habido varias comprobaciones antes, ¿cómo has llegado aquí?. 'model_name: {model_name}'")
         classifier_layer = None
+
+    return classifier_layer
+# -- Fin get_classifier_layer -- #    
+
+# https://github.com/munniomer/pytorch-tutorials/blob/master/beginner_source/finetuning_torchvision_models_tutorial.py
+def fine_tuning(model, model_name, outputs, is_main_device):
+    
+    if is_main_device:
+        logger.info("Adding fine-tuning layers")                        
+    
+    classifier_layer = get_classifier_layer(model, model_name, is_main_device)
 
     num_ftrs = classifier_layer.in_features
     if is_main_device:
@@ -175,7 +181,7 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
     
     model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
 
-    model = model.to(device)
+    #model = model.to(device)
     #if args[cons.IS_DISTRIBUTED]: model = DistributedDataParallel(model, device_ids=[device])
 
     return model
