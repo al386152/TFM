@@ -71,9 +71,7 @@ def modify_model_layers(model:torch.nn.Module, model_name:str, trial:optuna.Tria
     classifier_layer = mr.get_classifier_layer(model, model_name)
 
     num_ftrs = classifier_layer.in_features
-    # TODO: missing 1 required positional argument: 'num_features'
-    # TODO: Revisar el resto de capas también.
-    if trial.suggest_categorical("BatchNorm2D pseudo_bool", [True, False]):
+    if trial.suggest_categorical("BatchNorm1D pseudo_bool", [True, False]):
         mod_classifier_layer.append(torch.nn.BatchNorm1d(num_features=num_ftrs))
     
     if trial.suggest_categorical("LayerNorm pseudo_bool", [True, False]):
@@ -163,7 +161,8 @@ def objective(trial:optuna.Trial):
     args[cons.BATCH_SIZE] = trial.suggest_int("Batch size", 12, 48, step=6) # Esto se utiliza en "load_data_loaders"
 
     if is_main_device: logger.info(f"Optimizer: {optimizer_name}, lr: {lr}")
-    # --
+    # ---------
+
     model = model.to(device)
     if args[cons.IS_DISTRIBUTED]:
         model = DistributedDataParallel(model, device_ids=[device])        
@@ -194,7 +193,7 @@ def objective(trial:optuna.Trial):
 
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
-            
+    # ------
 
     if is_main_device: logger.info(f"{'-' * cons.NUM_GUIONES} Prueba finalizada {'-' * cons.NUM_GUIONES}")
 
@@ -234,7 +233,7 @@ def main_optuna(args:dict):
                           f"- Parameters:\n{study.best_trial.params}"])                
         logger.info(info)
     else:
-        # El fallo se daba porque el hilo principal acababa por el timeout pero el secundario esperaba al principal.
+        # Nota: Si el hilo principal tiene un timeout y se finaliza por éste, los hilos secundarios esperan nuevas tareas del principal.
         for _ in range(cons.OPTUNA_NUMBER_TRIALS):
             try:        
                 objective(None)
