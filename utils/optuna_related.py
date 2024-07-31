@@ -71,10 +71,10 @@ def modify_model_layers(model:torch.nn.Module, model_name:str, trial:optuna.Tria
     classifier_layer = mr.get_classifier_layer(model, model_name)
 
     num_ftrs = classifier_layer.in_features
-    if trial.suggest_categorical("BatchNorm1D pseudo_bool", [True, False]):
+    if trial.suggest_categorical("add BatchNorm1D", [True, False]):
         mod_classifier_layer.append(torch.nn.BatchNorm1d(num_features=num_ftrs))
     
-    if trial.suggest_categorical("LayerNorm pseudo_bool", [True, False]):
+    if trial.suggest_categorical("add LayerNorm", [True, False]):
         mod_classifier_layer.append(torch.nn.LayerNorm(normalized_shape=num_ftrs))    
 
     if "vgg" in model_name:
@@ -217,8 +217,8 @@ def main_optuna(args:dict):
             study_name="Optimización",
             direction="maximize",
             sampler=optuna.samplers.TPESampler(seed=cons.OPTUNA_SEED),
-            #pruner=optuna.pruners.MedianPruner()
-            pruner=optuna.pruners.NopPruner()
+            pruner=optuna.pruners.MedianPruner()
+            #pruner=optuna.pruners.NopPruner()
             )
 
         # Para que la salida de optuna se guarde en el log.
