@@ -217,7 +217,8 @@ def main_optuna(args:dict):
             study_name="Optimización",
             direction="maximize",
             sampler=optuna.samplers.TPESampler(seed=cons.OPTUNA_SEED),
-            pruner=optuna.pruners.MedianPruner()            
+            #pruner=optuna.pruners.MedianPruner()
+            pruner=optuna.pruners.NopPruner()
             )
 
         # Para que la salida de optuna se guarde en el log.
