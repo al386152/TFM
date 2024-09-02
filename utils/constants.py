@@ -73,8 +73,11 @@ POSSIBLE_OPTIMIZERS = ["Adam", "AdamW", "SGD"]
 
 BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
 
-ROTATION_DEGREES = 30 # Diría que 30º en ambos sentidos es la rotación máxima que podría encontrarse en la vida real
-RANDOM_PERSPECTIVE_DISTORSION_SCALE = 0.15 # No creo que sea buena idea modificar demasiado las imágenes
+ROTATION_DEGREES = 75 # Diría que 30º en ambos sentidos es la rotación máxima que podría encontrarse en la vida real
+RANDOM_PERSPECTIVE_DISTORSION_SCALE = 0.75 # No creo que sea buena idea modificar demasiado las imágenes
+P_H_FLIP = 0.2
+P_V_FLIP = 0.6
+
 
 # Nombres de las Métricas:
 AVG_LOSS = "Avg.Loss"
