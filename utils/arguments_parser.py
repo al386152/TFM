@@ -63,6 +63,9 @@ def get_args_parser():
     parser.add_argument(f"--{cons.MODEL_WEIGHTS}", default=None, type=str,
                 help="Model's weights path")
     
+    parser.add_argument(f"--{cons.NO_DATA_AUGMENT_CLASSES}", default='0', type=str,
+            help=f"List of classes that will not be augmented separated by a \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
+    
     parser.add_argument(f"--{cons.SHOW_DEBUG_OUTPUTS}", action='store_true', default=False,
             help="Show the debug outputs")
     
@@ -131,6 +134,8 @@ def check_args(args:dict):
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.debug(f"Después: {args[cons.SPLIT_PERCENTAGES][i]}")
 
+    # Generamos una lista de las clases que no hay que aumentar
+    args[cons.NO_DATA_AUGMENT_CLASSES] = args[cons.NO_DATA_AUGMENT_CLASSES].split(cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES)
     
 def get_dict_args():    
      # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia

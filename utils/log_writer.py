@@ -14,7 +14,7 @@ def prepare_log_file() -> str:
     log_path_with_date = os.path.join(cons.DEFAULT_LOG_FOLDER, str(the_date.date()))
 
     if not os.path.isdir(log_path_with_date):
-        os.mkdir(log_path_with_date)
+        os.makedirs(log_path_with_date)
 
     log_name = f"{str(the_date.time()).replace(':', '-')}_{cons.BASE_LOG_FILE_NAME}.log"
 

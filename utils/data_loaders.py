@@ -2,11 +2,12 @@ import os
 from typing import *
 
 from torch.utils.data import DataLoader
-from torchvision import datasets
+
 from torchvision.transforms import v2
 from torch.utils.data import DistributedSampler, random_split
 
 import utils.constants as cons
+from utils.modified_image_folder import ModifiedImageFolder
 import torch
 
 # Esto es para tener el logger
@@ -19,8 +20,11 @@ def load_datasets_one_path_three_folders(args:dict, is_main_device, transform:v2
     if not args[cons.SHOW_DEBUG_OUTPUTS]:
         return {
             folder_name:
-            datasets.ImageFolder(root = os.path.join(args[cons.DATA_PATH], folder_name),
-                                transform = transform if folder_name != cons.TRAIN_FOLDER_NAME else training_transform) 
+            ModifiedImageFolder(root = os.path.join(args[cons.DATA_PATH], folder_name),
+                                transform = transform if folder_name != cons.TRAIN_FOLDER_NAME else training_transform,
+                                basic_transform = transform, 
+                                classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES]
+                                ) 
             for folder_name in cons.LIST_FOLDER_NAMES
         }    
     else:
@@ -35,7 +39,11 @@ def load_datasets_one_path_three_folders(args:dict, is_main_device, transform:v2
             if is_main_device:
                 logger.debug(f"path: {path}")
 
-            dict_datasets[folder_name] = datasets.ImageFolder(path, transform = transform if folder_name != cons.TRAIN_FOLDER_NAME else training_transform)               
+            dict_datasets[folder_name] = ModifiedImageFolder(root = path, 
+                                                              transform = transform if folder_name != cons.TRAIN_FOLDER_NAME else training_transform,
+                                                              basic_transform = transform, 
+                                                              classes_not_augment= args[cons.NO_DATA_AUGMENT_CLASSES]
+                                                              )
 
         return dict_datasets
 
@@ -43,7 +51,10 @@ def load_datasets_one_path_one_folder(args:dict, is_main_device, transform:v2.Co
 
     dataset_sizes = args[cons.SPLIT_PERCENTAGES]
 
-    full_dataset = datasets.ImageFolder(root = args[cons.DATA_PATH], transform = transform) 
+    full_dataset = ModifiedImageFolder(root = args[cons.DATA_PATH], 
+                                        transform = transform,
+                                        basic_transform = transform, 
+                                        classes_not_augment= args[cons.NO_DATA_AUGMENT_CLASSES]) 
 
     if is_main_device: 
         logger.debug(f"full_dataset:\n{full_dataset}")
@@ -69,9 +80,9 @@ def load_dataset_three_paths(args:dict, is_main_device, transform:v2.Compose, tr
     
 
     dict_datasets = {
-        cons.TEST_FOLDER_NAME: datasets.ImageFolder(root = args[cons.TEST_DATA_PATH], transform = transform), 
-        cons.VALIDATION_FOLDER_NAME: datasets.ImageFolder(root = args[cons.VALIDATION_DATA_PATH], transform = transform), 
-        cons.TRAIN_FOLDER_NAME: datasets.ImageFolder(root = args[cons.TRAIN_DATA_PATH], transform = training_transform)
+        cons.TEST_FOLDER_NAME: ModifiedImageFolder(root = args[cons.TEST_DATA_PATH], transform = transform, basic_transform = transform, classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES]), 
+        cons.VALIDATION_FOLDER_NAME: ModifiedImageFolder(root = args[cons.VALIDATION_DATA_PATH], transform = transform, basic_transform = transform, classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES]), 
+        cons.TRAIN_FOLDER_NAME: ModifiedImageFolder(root = args[cons.TRAIN_DATA_PATH], transform = training_transform, basic_transform = transform, classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES])
     }
 
     if is_main_device:
@@ -85,8 +96,8 @@ def load_dataset_two_paths(args:dict, is_main_device, transform:v2.Compose, trai
 
     dataset_sizes = args[cons.SPLIT_PERCENTAGES]
     
-    train_val_dataset = datasets.ImageFolder(root = args[cons.DATA_PATH], transform = transform)
-    test_dataset = datasets.ImageFolder(root = args[cons.TEST_DATA_PATH], transform = transform)
+    train_val_dataset = ModifiedImageFolder(root = args[cons.DATA_PATH], transform = transform, basic_transform = transform, classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES])
+    test_dataset = ModifiedImageFolder(root = args[cons.TEST_DATA_PATH], transform = transform, basic_transform = transform, classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES])
 
     if is_main_device: 
         logger.debug(f"train_val_dataset:\n{train_val_dataset}")
@@ -108,7 +119,7 @@ def load_dataset_two_paths(args:dict, is_main_device, transform:v2.Compose, trai
 
     return dict_datasets
 
-def get_validation_test_transform(args):
+def get_basic_transform(args):
     return v2.Compose([
         v2.PILToTensor(),        
         v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),
@@ -136,7 +147,7 @@ def load_datasets(args:dict, is_main_device) -> dict:
         logger.debug("load_datasets")
 
     # Transformaciones de las imagens de Validación y Prueba
-    transform = get_validation_test_transform(args)
+    transform = get_basic_transform(args)
 
     if is_main_device:
         logger.debug(f"transform created:\n{transform}")
