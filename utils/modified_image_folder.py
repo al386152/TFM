@@ -17,14 +17,14 @@ class ModifiedImageFolder(ImageFolder):
         path, target = self.samples[index]
         image = self.loader(path)       
         
-        if str(target) in self.classes_not_augment:
-            print(f"==> TEST[Borrar] {target} in self.classes_not_augment ({self.classes_not_augment})")
-            image = self.basic_transform(image)  
-        else:
-            print(f"==> TEST[Borrar] {target} not in self.classes_not_augment ({self.classes_not_augment})")
-            image = self.transform(image)    
+        #if str(target) in self.classes_not_augment:
+        #    print(f"==> TEST[Borrar] {target} in self.classes_not_augment ({self.classes_not_augment})")
+        #    image = self.basic_transform(image)  
+        #else:
+        #    print(f"==> TEST[Borrar] {target} not in self.classes_not_augment ({self.classes_not_augment})")
+        #    image = self.transform(image)    
 
-        #image = self.basic_transform(image) if target in self.classes_not_augment else self.transform(image)
+        image = self.basic_transform(image) if target in self.classes_not_augment else self.transform(image)
 
         return image, target
 
