@@ -27,7 +27,7 @@ def GET_TIME_HMS_FORMAT(the_time, time_format="%H:%M:%S.%f")->str:
             h, resto = divmod(seconds, 3600)
             m, s = divmod(resto, 60)
             
-            the_time = f"{int(h):02}:{int(m):02}:{int(s):02}.{mseconds}"
+            output = f"{int(h):02}:{int(m):02}:{int(s):02}.{mseconds}"
         else:
             # Se ha dado el caso de que si justo ha ocurrido en el mismo microsegundo, timedelta elimina los microsegundos de su string
             if the_time.microseconds == 0:
@@ -35,9 +35,9 @@ def GET_TIME_HMS_FORMAT(the_time, time_format="%H:%M:%S.%f")->str:
             else:
                 _time_format = time_format
             the_time = datetime.strptime(str(the_time), _time_format)
-        
+            output = the_time.strftime(time_format)
     
-    return the_time.strftime(time_format)
+    return output
 # -- Fin GET_TIME_HMS_FORMAT -- #
 
 # Se asume que la lista no está vacía
