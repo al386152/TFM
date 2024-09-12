@@ -75,6 +75,12 @@ def get_args_parser():
     parser.add_argument(f"--{cons.IS_DISTRIBUTED}", action='store_true', default=False,
             help="True: the training is distributed. False: the training is only local.")
 
+
+    parser.add_argument(f"--{cons.ROTATION_DEGREES}", default=75, type=int, help=f"Grados de rotación máxima que pueden tener las imágenes.")
+    parser.add_argument(f"--{cons.RANDOM_PERSPECTIVE_DISTORSION}", default=0.75, type=int, help=f"Escala de la distorsión de la transformación.")
+    parser.add_argument(f"--{cons.P_HORIZONTAL_FLIP}", default=0.2, type=int, help=f"Probabilidad de que se realize un giro horizontal de la imagen.")
+    parser.add_argument(f"--{cons.P_VERTICAL_FLIP}", default=0.6, type=int, help=f"Probabilidad de que se realize un giro vertical de la imagen.")
+
     # Variables relacionadas con "Color Jitter"
     parser.add_argument(f"--{cons.COLOR_JITTER_BRIGHTNESS}", default="1", type=str, 
                         help=f"No utilizar números negativos. Si es un solo número, el rango será: [max(0, 1 - N), 1 + N]. Si se dan dos número separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', esos serán el mínimo y máximo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")

@@ -22,6 +22,10 @@ COLOR_JITTER_BRIGHTNESS = "brightness"
 COLOR_JITTER_CONTRAST = "contrast" 
 COLOR_JITTER_SATURATION = "saturation"
 COLOR_JITTER_HUE = "hue"
+ROTATION_DEGREES = "rotation"
+RANDOM_PERSPECTIVE_DISTORSION = "random_distorsion"
+P_HORIZONTAL_FLIP = "horizontal_flip"
+P_VERTICAL_FLIP = "vertical_flip"
 IS_HYPERTUNING = "hypertuning"
 OPTIMIZER = "optimizer"
 
@@ -74,12 +78,6 @@ DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 POSSIBLE_OPTIMIZERS = ["Adam", "AdamW", "SGD"]
 
 BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
-
-ROTATION_DEGREES = 75 # Diría que 30º en ambos sentidos es la rotación máxima que podría encontrarse en la vida real
-RANDOM_PERSPECTIVE_DISTORSION_SCALE = 0.75 # No creo que sea buena idea modificar demasiado las imágenes
-P_H_FLIP = 0.2
-P_V_FLIP = 0.6
-
 
 # Nombres de las Métricas:
 AVG_LOSS = "Avg.Loss"

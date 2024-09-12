@@ -13,10 +13,14 @@ class ModifiedImageFolder(ImageFolder):
         self.basic_transform = basic_transform
         self.classes_not_augment = classes_not_augment
 
+        #print(f"self.classes: {self.classes}")
+        #print(f"self.class_to_idx: {self.class_to_idx}")
+
     def __getitem__(self, index):
         path, target = self.samples[index]
         image = self.loader(path)       
         
+        #print(f"target: {target}")
         #if str(target) in self.classes_not_augment:
         #    print(f"==> TEST[Borrar] {target} in self.classes_not_augment ({self.classes_not_augment})")
         #    image = self.basic_transform(image)  
