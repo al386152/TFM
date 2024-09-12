@@ -131,10 +131,10 @@ def get_training_transform(args):
     return v2.Compose([        
         v2.PILToTensor(),
         v2.Resize((args[cons.ALTURA_IMG], args[cons.ANCHURA_IMG])),        
-        v2.RandomHorizontalFlip(cons.P_HORIZONTAL_FLIP), 
-        v2.RandomVerticalFlip(cons.P_VERTICAL_FLIP), 
-        v2.RandomPerspective(distortion_scale=cons.RANDOM_PERSPECTIVE_DISTORSION), # Probabilidad de 0.5
-        v2.RandomRotation(cons.ROTATION_DEGREES),
+        v2.RandomHorizontalFlip(args[cons.P_HORIZONTAL_FLIP]), 
+        v2.RandomVerticalFlip(args[cons.P_VERTICAL_FLIP]), 
+        v2.RandomPerspective(distortion_scale=args[cons.RANDOM_PERSPECTIVE_DISTORSION]),
+        v2.RandomRotation(args[cons.ROTATION_DEGREES]),
         v2.ColorJitter(brightness=args[cons.COLOR_JITTER_BRIGHTNESS], contrast=args[cons.COLOR_JITTER_CONTRAST], 
                        saturation=args[cons.COLOR_JITTER_SATURATION], hue=args[cons.COLOR_JITTER_HUE]),         
         # NOTA: Para hacer el aumento de datos MODIFICAR AQUÍ ==>
