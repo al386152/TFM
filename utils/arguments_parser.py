@@ -76,10 +76,10 @@ def get_args_parser():
             help="True: the training is distributed. False: the training is only local.")
 
 
-    parser.add_argument(f"--{cons.ROTATION_DEGREES}", default=75, type=int, help=f"Grados de rotación máxima que pueden tener las imágenes.")
-    parser.add_argument(f"--{cons.RANDOM_PERSPECTIVE_DISTORSION}", default=0.75, type=int, help=f"Escala de la distorsión de la transformación.")
-    parser.add_argument(f"--{cons.P_HORIZONTAL_FLIP}", default=0.2, type=int, help=f"Probabilidad de que se realize un giro horizontal de la imagen.")
-    parser.add_argument(f"--{cons.P_VERTICAL_FLIP}", default=0.6, type=int, help=f"Probabilidad de que se realize un giro vertical de la imagen.")
+    parser.add_argument(f"--{cons.ROTATION_DEGREES}", default=75, type=float, help=f"Grados de rotación máxima que pueden tener las imágenes.")
+    parser.add_argument(f"--{cons.RANDOM_PERSPECTIVE_DISTORSION}", default=0.75, type=float, help=f"Escala de la distorsión de la transformación.")
+    parser.add_argument(f"--{cons.P_HORIZONTAL_FLIP}", default=0.2, type=float, help=f"Probabilidad de que se realize un giro horizontal de la imagen.")
+    parser.add_argument(f"--{cons.P_VERTICAL_FLIP}", default=0.6, type=float, help=f"Probabilidad de que se realize un giro vertical de la imagen.")
 
     # Variables relacionadas con "Color Jitter"
     parser.add_argument(f"--{cons.COLOR_JITTER_BRIGHTNESS}", default="1", type=str, 
