@@ -119,3 +119,18 @@ def cleanup():
     torch.distributed.barrier()
     torch.distributed.destroy_process_group()
 # -- Fin cleanup -- # 
+
+def get_proporcion_datasets(datasets:dict) -> dict:
+    proporcion = {}
+    for elem in cons.LIST_FOLDER_NAMES:            
+        _proporcion = datasets[elem].get_proporcion_clase()
+                
+        for elem in _proporcion:
+            if elem not in proporcion:
+                proporcion[elem] = 0    
+            proporcion[elem] += _proporcion[elem]
+
+    num_folders = len(cons.LIST_FOLDER_NAMES)
+    return {elem: proporcion[elem]/num_folders for elem in proporcion}
+    #print(f"proporcion: {proporcion}")
+# -- Fin get_proporcion_datasets -- #

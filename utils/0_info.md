@@ -23,6 +23,9 @@ En este fichero se declaran las funciones relacionadas con las mediciones de los
 ## model_related.py
 En este fichero se recoge todo aquello relacionado con el modelo (como la creación del objeto de modelo o la evaluación del modelo) menos el entrenamiento, que está en "training.py" (se hacía demasiado largo el fichero).
 
+## modified_image_folder.py
+En este fichero se recoge una modificación de la clase "ImageFolder" para poder aplicar una lista de transformacióones u otra en función de si pertenecen a una clase o a otra.
+
 ## operations.py
 En este fichero se encuentran distintas funciones que, o bien se utilizan en varios ficheros, o no cuadraban en ninún otro fichero.
 

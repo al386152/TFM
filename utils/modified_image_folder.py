@@ -1,4 +1,5 @@
 from torchvision.datasets import ImageFolder
+from collections import Counter
 
 class ModifiedImageFolder(ImageFolder):
     
@@ -14,7 +15,7 @@ class ModifiedImageFolder(ImageFolder):
         self.classes_not_augment = classes_not_augment
 
         #print(f"self.classes: {self.classes}")
-        #print(f"self.class_to_idx: {self.class_to_idx}")
+        #print(f"self.class_to_idx: {self.class_to_idx}")            
 
     def __getitem__(self, index):
         path, target = self.samples[index]
@@ -32,3 +33,8 @@ class ModifiedImageFolder(ImageFolder):
 
         return image, target
 
+    def get_proporcion_clase(self) -> dict:
+        counter_clases = Counter(self.targets)
+        num_imagenes = len(self.samples)
+        proporcion = {clase: (numero / num_imagenes) for clase, numero in counter_clases.items()}
+        return proporcion

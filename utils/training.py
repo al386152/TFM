@@ -90,7 +90,7 @@ def train_one_epoch(model, training_loader, device, estimacion_duracion,
     return estimacion_duracion
 # --  Fin train_one_epoch -- #
 
-def train_model(args: dict, model, dataloaders, is_main_device, device, lista_metricas):
+def train_model(args: dict, model, dataloaders, is_main_device, device, lista_metricas, proporcion_clases=None):
     
     if is_main_device:
         logger.info( ('-' * cons.NUM_GUIONES) + "Starting to train the model" + ('-' * cons.NUM_GUIONES) )
@@ -101,7 +101,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                     
-    loss_fn = torch.nn.CrossEntropyLoss()
+    loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
     optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)

@@ -2,10 +2,11 @@ import os
 
 from datetime import datetime
 from torch.nn.parallel import DistributedDataParallel
+from torch import tensor
 
 import utils.arguments_parser as ap
 import utils.constants as cons
-from utils.operations import GET_TIME_HMS_FORMAT
+from utils.operations import GET_TIME_HMS_FORMAT, get_proporcion_datasets
 
 import utils.training as t
 import utils.model_related as mr
@@ -38,6 +39,10 @@ def main(args: dict):
     datasets = load_datasets(args, is_main_device)
     if is_main_device:
         logger.debug("\n".join([f"len(dataset): {len(dataset)}\ndataset:\n{dataset}" for dataset in datasets]))
+    
+    proporcion_clases = get_proporcion_datasets(datasets)    
+    logger.info(f"proporcion_clases: {proporcion_clases}")
+    proporcion_clases = tensor(list(proporcion_clases.values()))    
 
     data_loaders = load_data_loaders(args, datasets)
     if is_main_device:
@@ -47,7 +52,7 @@ def main(args: dict):
 
     if is_main_device:
         t_inicio = datetime.now()
-    t.train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, lista_metricas=metricas)
+    t.train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, lista_metricas=metricas, proporcion_clases=proporcion_clases)
     if is_main_device:
         tiempo_entrenamiento = GET_TIME_HMS_FORMAT((datetime.now() - t_inicio))
         logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")

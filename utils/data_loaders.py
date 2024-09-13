@@ -177,12 +177,12 @@ def load_datasets(args:dict, is_main_device) -> dict:
     dict_datasets = func_load_dataset(args, is_main_device, transform, training_transform)
 
     if args[cons.SHOW_DEBUG_OUTPUTS] and is_main_device:
-            for data_set in dict_datasets:
-                logger.debug(f"{data_set}:\n\t{dict_datasets[data_set]}")
+        for data_set in dict_datasets:
+            logger.debug(f"{data_set}:\n\t{dict_datasets[data_set]}")
 
-                for i in range(3):  # "3" para tener unos pocos ejemplos, podría ser 1 podrían ser todos.
-                    img, label = dict_datasets[data_set][i]
-                    logger.debug(f"Sample {i} from {data_set} - img shape: {img.shape}, label: {label}, img min: {img.min()}, img max: {img.max()}")
+            for i in range(3):  # "3" para tener unos pocos ejemplos, podría ser 1 podrían ser todos.
+                img, label = dict_datasets[data_set][i]
+                logger.debug(f"Sample {i} from {data_set} - img shape: {img.shape}, label: {label}, img min: {img.min()}, img max: {img.max()}")
    
 
     return dict_datasets
