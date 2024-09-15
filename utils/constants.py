@@ -1,4 +1,5 @@
 from torchvision.models import vgg19, resnet50, resnet152, densenet121, densenet169
+from torch.optim import SGD, Adam, AdamW
 from logging import _levelToName, INFO
 
 # Nombres argumentos del programa
@@ -76,6 +77,11 @@ POSSIBLE_MODELS = SWITCH_MODELOS.keys()
 DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 
 POSSIBLE_OPTIMIZERS = ["Adam", "AdamW", "SGD"]
+SWITCH_OPTIMIZERS = {
+    "Adam": Adam,
+    "AdamW": AdamW,
+    "SGD": SGD
+}
 
 BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``
 

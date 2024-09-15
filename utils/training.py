@@ -37,7 +37,8 @@ class EarlyStopper:
 def train_one_epoch(model, training_loader, device, estimacion_duracion,
                     loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True, debuging=False):
     
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer
+    #optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer    
+    
     size_batches = len(training_loader)    
     log_info_cada = int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) if int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
 
@@ -63,7 +64,8 @@ def train_one_epoch(model, training_loader, device, estimacion_duracion,
         outputs = model(inputs)
         loss = loss_func(outputs, labels)
         loss.backward()
-        optimizer.step()            
+        optimizer.step()
+        scheduler.step(loss)
         
         if is_main_device:
             if debuging or (i % log_info_cada == 0):
@@ -104,8 +106,15 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
-    optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
+    #optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
+    #optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
+    if args[cons.OPTIMIZER] == "SGD":
+        optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
+    else:
+        optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE])
     
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min')
+
     # Creando carpetas para las salidas  
     if not os.path.isdir(partial_models_path) and is_main_device:
         os.mkdir(partial_models_path)
@@ -142,6 +151,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         dict_resultados = evaluate_model(model=model, dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], device=device, 
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
                                          loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation")
+    
+        scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
 
         if dict_resultados[cons.MAIN_METRIC] < best_metric:
             best_metric = dict_resultados[cons.MAIN_METRIC]
