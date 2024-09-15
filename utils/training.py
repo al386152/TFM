@@ -65,7 +65,6 @@ def train_one_epoch(model, training_loader, device, estimacion_duracion,
         loss = loss_func(outputs, labels)
         loss.backward()
         optimizer.step()
-        scheduler.step(loss)
         
         if is_main_device:
             if debuging or (i % log_info_cada == 0):
