@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from torch import distributed, cuda
 import torch.distributed
 import torch.utils
+from collections import Counter
 
 import utils.constants as cons
 
@@ -122,8 +123,8 @@ def cleanup():
 
 def get_proporcion_datasets(datasets:dict) -> dict:
     proporcion = {}
-    for elem in cons.LIST_FOLDER_NAMES:            
-        _proporcion = datasets[elem].get_proporcion_clase()
+    for clave in cons.LIST_FOLDER_NAMES:            
+        _proporcion = datasets[clave].get_proporcion_clase()        
                 
         for elem in _proporcion:
             if elem not in proporcion:
@@ -132,5 +133,4 @@ def get_proporcion_datasets(datasets:dict) -> dict:
 
     num_folders = len(cons.LIST_FOLDER_NAMES)
     return {elem: proporcion[elem]/num_folders for elem in proporcion}
-    #print(f"proporcion: {proporcion}")
 # -- Fin get_proporcion_datasets -- #

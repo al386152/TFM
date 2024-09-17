@@ -12,7 +12,7 @@ import utils.training as t
 import utils.model_related as mr
 from utils.log_writer import getLogWritter, set_level
 from utils.metrics import get_list_metrics, logger as metrics_logger
-from utils.data_loaders import load_datasets, load_data_loaders, logger as dl_logger
+from utils.data_loaders import load_datasets, load_data_loaders, concat_datasets_and_get_proportion, logger as dl_logger
 from utils.operations import setup_gpu
 from utils.optuna_related import main_optuna
 
@@ -40,7 +40,11 @@ def main(args: dict):
     if is_main_device:
         logger.debug("\n".join([f"len(dataset): {len(dataset)}\ndataset:\n{dataset}" for dataset in datasets]))
     
-    proporcion_clases = get_proporcion_datasets(datasets)    
+    if args[cons.BATCH_AUGMENTATION] > 0: 
+        datasets, proporcion_clases = concat_datasets_and_get_proportion(args, datasets, is_main_device)
+    else:
+        proporcion_clases = get_proporcion_datasets(datasets)
+
     logger.info(f"proporcion_clases: {proporcion_clases}")
     proporcion_clases = tensor(list(proporcion_clases.values()))    
 

@@ -8,9 +8,9 @@ from utils.log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
 
+# TODO: Poner la ayuda en un mismo idioma.
 def get_args_parser():
-    parser = argparse.ArgumentParser(prog="Proyecto", 
-                                     description="Modelo")
+    parser = argparse.ArgumentParser(prog="Proyecto", description="Modelo")
     
     parser.add_argument(f"--{cons.BATCH_SIZE}", default=64, type=int,
                     help="Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus")
@@ -65,7 +65,10 @@ def get_args_parser():
     
     parser.add_argument(f"--{cons.NO_DATA_AUGMENT_CLASSES}", default='0', type=str,
             help=f"List of classes that will not be augmented separated by a \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
-    
+
+    parser.add_argument(f"--{cons.BATCH_AUGMENTATION}", default=0, type=int,
+            help=f"Número de veces que se reptien las muestras en un mismo batch. Se omiten las clases que aparecen en: \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
+
     parser.add_argument(f"--{cons.SHOW_DEBUG_OUTPUTS}", action='store_true', default=False,
             help="Show the debug outputs")
     
