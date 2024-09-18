@@ -10,7 +10,7 @@ import utils.constants as cons
 fecha = datetime.now().replace(microsecond=0)
 
 def OUTPUT_MODEL_NAME(name:str, number_clases:int)->str:
-    return f"model_{name}_{number_clases}_outputs.pth"
+    return f"model_{name}_{number_clases}_outputs_{fecha}.pth"
 # -- Fin OUTPUT_MODEL_NAME -- #
 
 # Se asume que la lista no está vacía
