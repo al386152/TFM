@@ -92,11 +92,14 @@ EPOCH_LOSS = "Epoch loss"
 
 ACCURACY = "Accuracy"
 AUROC = "AUROC"
-AVERAGE_PRECISION = "Average Precision"
+AVERAGE_PRECISION = "Average_Precision"
 F_ONE_SCORE = "F1 Score"
-CONFUSION_MATRIX = "Confusion Matrix"
+CONFUSION_MATRIX = "Confusion_Matrix"
+NORM_CONFUSION_MATRIX = "Normalized_Confusion_Matrix"
 
 MAIN_METRIC = AUROC
+
+REDUCE_ON_PLATEAU_PATIENCE = 3
 
 OPTUNA_SEED = 1234
 OPTUNA_NUMBER_TRIALS = 30

@@ -16,7 +16,8 @@ def get_list_metrics(num_classes:int, device, task="multiclass"):
             (cons.AUROC, AUROC(task = task, num_classes = num_classes)),
             (cons.AVERAGE_PRECISION, AveragePrecision(task = task, num_classes = num_classes)),
             (cons.F_ONE_SCORE, F1Score(task = task, num_classes = num_classes)),
-            (cons.CONFUSION_MATRIX, ConfusionMatrix(task = task, num_classes = num_classes))]
+            (cons.CONFUSION_MATRIX, ConfusionMatrix(task = task, num_classes = num_classes)),
+            (cons.NORM_CONFUSION_MATRIX, ConfusionMatrix(task = task, num_classes = num_classes, normalize="true"))]
     
     # Moviéndo las métricas al dispositivo que toca.
     for _, metrica in lista_metricas:
@@ -38,10 +39,10 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
         if is_main_device:
             logger.debug(f"get_metrics - name: {name}, metric: {metric}")
 
-        if name == cons.CONFUSION_MATRIX:
+        if name == cons.CONFUSION_MATRIX or name == cons.NORM_CONFUSION_MATRIX:
             
             if is_main_device:
-                logger.debug(f"Confusion Matrix")
+                logger.debug(f"{name}")
         
             resultados[name] =  metric.compute()
 
@@ -58,8 +59,7 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                         os.makedirs(path_images_folder)
                         #os.mkdir(path_images_folder)
                         
-                            
-                    name_file = f"{args[cons.MODEL]}_confusion_matrix{cons.IMAGES_FILE_FORMAT}"
+                    name_file = f"{args[cons.MODEL]}_{name}{cons.IMAGES_FILE_FORMAT}"                    
                     name_file = os.path.join(path_images_folder, name_file)
 
                     plt.savefig(name_file, dpi=600, bbox_inches ='tight')

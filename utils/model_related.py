@@ -141,7 +141,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     if is_main_device:
         logger.debug(f"dict_resultados:\n{dict_resultados}")
         for name in dict_resultados:            
-            logger.info(f"{name}:\n{dict_resultados[name]}" if name == cons.CONFUSION_MATRIX \
+            logger.info(f"{name}:\n{dict_resultados[name]}" if (name == cons.CONFUSION_MATRIX or name == cons.NORM_CONFUSION_MATRIX)  \
                         else f"{name}: {dict_resultados[name]:.4f}")
             
 

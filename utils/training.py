@@ -112,7 +112,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     else:
         optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE])
     
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max')
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE)
 
     # Creando carpetas para las salidas  
     if not os.path.isdir(partial_models_path) and is_main_device:
