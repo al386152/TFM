@@ -10,6 +10,32 @@ from .log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
 
+# TODO: Hacer esto bien
+# Esto lo estoy poniendo esto de esta forma por simplicidad y para estos casos.
+def modify_model_layers(model:torch.nn.Module, model_name:str, args:dict):
+
+    mod_classifier_layer = list()
+
+    classifier_layer = get_classifier_layer(model, model_name)
+
+    num_ftrs = classifier_layer.in_features
+    # TODO: Poner una variable para que controle esto
+    mod_classifier_layer.append(torch.nn.BatchNorm1d(num_features=num_ftrs))    
+    mod_classifier_layer.append(torch.nn.LayerNorm(normalized_shape=num_ftrs))    
+
+    if "resnet" in model_name:
+        
+        mod_classifier_layer.append(torch.nn.Dropout(p = args[cons.P_DROPOUT]))
+        mod_classifier_layer.append(model.fc)
+        model.fc = torch.nn.Sequential(*mod_classifier_layer)
+
+    elif "densenet" in model_name:
+
+        mod_classifier_layer.append(torch.nn.Dropout(p = args[cons.P_DROPOUT]))
+        mod_classifier_layer.append(model.classifier)
+        model.classifier = torch.nn.Sequential(*mod_classifier_layer)
+# -- FIN modify_model_layers -- #
+
 def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1, is_main_device = True):
 
     if capas_entrenar_final == -1:

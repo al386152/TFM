@@ -100,6 +100,8 @@ def get_args_parser():
     parser.add_argument(f"--{cons.OPTIMIZER}", default="Adam", type=str, 
                         help=f"Optimizer's name. Options: {str(cons.POSSIBLE_OPTIMIZERS).replace('[', '').replace(']', '')}")
 
+    parser.add_argument(f"--{cons.P_DROPOUT}", default=0.0, type=float, help=f"Probabilidad de que la capa de dropout se active")
+
     return parser
 
 def check_args(args:dict):

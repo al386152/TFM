@@ -29,12 +29,15 @@ def main(args: dict):
         logger.info(f"Device: {device}")
 
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+
+    # TODO: Hacer bien
+    mr.modify_model_layers(model=model, model_name=args[cons.MODEL], args=args)
     model = model.to(device)
     if args[cons.IS_DISTRIBUTED]:
         model = DistributedDataParallel(model, device_ids=[device])        
 
     if is_main_device:
-        logger.info(f"Model: {model}")
+        logger.info(f"Model: {model}")    
 
     datasets = load_datasets(args, is_main_device)
     if is_main_device:
