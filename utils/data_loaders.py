@@ -21,6 +21,15 @@ logger = getLogWritter(__name__)
 def load_datasets_one_path_three_folders(args:dict, is_main_device, transform:v2.Compose, training_transform: v2.Compose, augmenting_batch: bool) -> dict:
     # Transformaciones de las imagens de entrenamiento
 
+    if args[cons.INFERENCE]:
+        return concat_datasets([ModifiedImageFolder(root = os.path.join(args[cons.DATA_PATH], folder_name),
+                                    transform = transform,
+                                    basic_transform = transform, 
+                                    classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES])
+
+                                    for folder_name in cons.LIST_FOLDER_NAMES
+                                ], is_main_device  )
+
     if not args[cons.SHOW_DEBUG_OUTPUTS]:
         if augmenting_batch:
             return {
@@ -79,6 +88,9 @@ def load_datasets_one_path_one_folder(args:dict, is_main_device, transform:v2.Co
     if is_main_device: 
         logger.debug(f"full_dataset:\n{full_dataset}")
 
+    if args[cons.INFERENCE]:
+        return full_dataset
+
     train_dataset, val_dataset, test_dataset = random_split(full_dataset, dataset_sizes)    
 
     if is_main_device: 
@@ -98,6 +110,15 @@ def load_datasets_one_path_one_folder(args:dict, is_main_device, transform:v2.Co
 
 def load_dataset_three_paths(args:dict, is_main_device, transform:v2.Compose, training_transform: v2.Compose, augmenting_batch: bool) -> dict:
     
+    if args[cons.INFERENCE]:
+        return concat_datasets(
+            [
+                ExcludingClassesImageFolder(root = args[cons.TEST_DATA_PATH], transform = transform, classes_to_exclude = args[cons.NO_DATA_AUGMENT_CLASSES]), 
+                ExcludingClassesImageFolder(root = args[cons.VALIDATION_DATA_PATH], transform = transform, classes_to_exclude = args[cons.NO_DATA_AUGMENT_CLASSES]), 
+                ExcludingClassesImageFolder(root = args[cons.TRAIN_DATA_PATH], transform = transform, classes_to_exclude = args[cons.NO_DATA_AUGMENT_CLASSES])
+            ]
+        )
+
     if augmenting_batch:
         dict_datasets = {
             cons.TEST_FOLDER_NAME: ModifiedImageFolder(root = args[cons.TEST_DATA_PATH], transform = transform, basic_transform = transform, classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES]), 
@@ -116,11 +137,14 @@ def load_dataset_three_paths(args:dict, is_main_device, transform:v2.Compose, tr
         logger.debug(f"val_dataset:\n{dict_datasets[cons.VALIDATION_FOLDER_NAME]}")
         logger.debug(f"train_dataset:\n{dict_datasets[cons.TRAIN_FOLDER_NAME]}")    
     
+    
+    
     return dict_datasets
 
 def load_dataset_two_paths(args:dict, is_main_device, transform:v2.Compose, training_transform: v2.Compose, augmenting_batch: bool) -> dict:
 
     dataset_sizes = args[cons.SPLIT_PERCENTAGES]
+
     
     if augmenting_batch:
         train_val_dataset = ModifiedImageFolder(root = args[cons.DATA_PATH], transform = transform, basic_transform = transform, classes_not_augment = args[cons.NO_DATA_AUGMENT_CLASSES])
@@ -132,6 +156,7 @@ def load_dataset_two_paths(args:dict, is_main_device, transform:v2.Compose, trai
     if is_main_device: 
         logger.debug(f"train_val_dataset:\n{train_val_dataset}")
         logger.debug(f"test_dataset:\n{test_dataset}")
+
 
     train_dataset, val_dataset = random_split(train_val_dataset, dataset_sizes)    
 
@@ -212,6 +237,8 @@ def load_datasets(args:dict, is_main_device, not_augmenting_batch:bool = True) -
                 img, label = dict_datasets[data_set][i]
                 logger.debug(f"Sample {i} from {data_set} - img shape: {img.shape}, label: {label}, img min: {img.min()}, img max: {img.max()}")
    
+    #if args[cons.INFERENCE]:
+    #    dict_datasets = concat_datasets(dict_datasets, is_main_device)
 
     return dict_datasets
             
@@ -243,15 +270,39 @@ def load_data_loaders(args: dict, datasets:dict) -> dict:
             sampler=samplers[folder_name],
             batch_size=args[cons.BATCH_SIZE],
             drop_last=False,
-            pin_memory=False,
+            pin_memory=True,
             
             # shuffle = True # Con el Sampler debería hacerse automáticamente.
         )
         for folder_name in cons.LIST_FOLDER_NAMES
     }
 
+def load_data_loaders_inference(args: dict, dataset) -> dict:
+
+    world_size = 1 if ( "WORLD_SIZE" not in os.environ) else int(os.environ["WORLD_SIZE"])
+    rank = 0 if ( "LOCAL_RANK" not in os.environ) else int(os.environ["LOCAL_RANK"])
+
+    if rank == 0:
+        logger.debug(f"world_size: {world_size} (type: {type(world_size)})")
+        logger.debug(f"rank: {rank} (type: {type(rank)})")
+
+        logger.info(f"==>type(dataset): {type(dataset)}")
+
+    sampler = ( DistributedSampler(dataset, shuffle=True, num_replicas=world_size, rank=rank) if args[cons.IS_DISTRIBUTED] else
+                torch.utils.data.SequentialSampler(dataset) )
+
+    return  DataLoader(
+            dataset, 
+            sampler=sampler,
+            batch_size=args[cons.BATCH_SIZE],
+            drop_last=False,
+            pin_memory=True
+            )
+
 def concat_datasets_and_get_proportion(args: dict, datasets: dict, is_main_device: bool)->Tuple[dict,dict]:
-    logger.info(f"Repeating the samples {args[cons.BATCH_AUGMENTATION]} times (except the ones of this classes: {args[cons.NO_DATA_AUGMENT_CLASSES]})")
+
+    if is_main_device:
+        logger.info(f"Repeating the samples {args[cons.BATCH_AUGMENTATION]} times (except the ones of this classes: {args[cons.NO_DATA_AUGMENT_CLASSES]})")
     
     # TODO: respasar
     # Idea: Hacer un diccionario de listas de datasets (deberían haber 3: "Test", "Train", "Validation")
@@ -282,3 +333,8 @@ def concat_datasets_and_get_proportion(args: dict, datasets: dict, is_main_devic
     dict_concatenaciones_datasets = {clave: torch.utils.data.ConcatDataset(dict_datasets[clave]) for clave in datasets}
 
     return (dict_concatenaciones_datasets, dict_proporciones)
+
+def concat_datasets(datasets: list, is_main_device: bool)->dict:
+    if is_main_device:
+        logger.info("Concatenando los datasets")
+    return torch.utils.data.ConcatDataset(datasets=datasets)

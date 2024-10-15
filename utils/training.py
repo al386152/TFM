@@ -5,6 +5,8 @@ from torch.distributed import barrier
 
 from datetime import datetime
 
+import torch.distributed
+
 import utils.constants as cons
 import utils.metrics as m
 from utils.operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
@@ -34,8 +36,8 @@ class EarlyStopper:
 # --  Fin class EarlyStopper -- #
 
 
-def train_one_epoch(model, training_loader, device, estimacion_duracion,
-                    loss_func=torch.nn.CrossEntropyLoss(), optimizer = None, is_main_device=True, debuging=False):
+def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
+                    loss_func, optimizer = None, is_main_device=True, debuging=False):
     
     #optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer    
     
@@ -62,6 +64,10 @@ def train_one_epoch(model, training_loader, device, estimacion_duracion,
 
         optimizer.zero_grad()
         outputs = model(inputs)
+        outputs.to(device)
+
+        if args[cons.IS_DISTRIBUTED]:
+            torch.distributed.barrier()
         loss = loss_func(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -101,17 +107,20 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     partial_models_path = args[cons.PARTIAL_MODELS_PATH] 
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                                    
+
+    if is_main_device:
+        print(f"Main_device - len(proporcion_clases): {len(proporcion_clases)}")
+    else:
+        print(f"Other_device - len(proporcion_clases): {len(proporcion_clases)}")
+
     loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
-    #optimizer = torch.optim.SGD(model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
-    #optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
     if args[cons.OPTIMIZER] == "SGD":
         optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
     else:
         optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE])
-    
+
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE)
 
     # Creando carpetas para las salidas  
@@ -140,12 +149,12 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
             logger.info(info)
 
         model.train(True)
-        est_duracion_batch = train_one_epoch(model=model, device=device, 
-                                                       training_loader=dataloaders[cons.TRAIN_FOLDER_NAME],  
-                                                       loss_func=loss_fn, optimizer=optimizer, 
-                                                       estimacion_duracion=est_duracion_batch, 
-                                                       is_main_device=is_main_device, 
-                                                       debuging=args[cons.SHOW_DEBUG_OUTPUTS])
+        est_duracion_batch = train_one_epoch(args=args, model=model, device=device, 
+                                             training_loader=dataloaders[cons.TRAIN_FOLDER_NAME],  
+                                             loss_func=loss_fn, optimizer=optimizer, 
+                                             estimacion_duracion=est_duracion_batch, 
+                                             is_main_device=is_main_device, 
+                                             debuging=args[cons.SHOW_DEBUG_OUTPUTS])
 
         dict_resultados = evaluate_model(model=model, dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], device=device, 
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 

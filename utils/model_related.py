@@ -6,7 +6,7 @@ import utils.constants as cons
 import utils.metrics as m
 from .operations import OUTPUT_MODEL_NAME
 from .log_writer import getLogWritter
-
+from torch.nn.parallel import DistributedDataParallel
 
 logger = getLogWritter(__name__)
 
@@ -23,13 +23,13 @@ def modify_model_layers(model:torch.nn.Module, model_name:str, args:dict):
     mod_classifier_layer.append(torch.nn.BatchNorm1d(num_features=num_ftrs))    
     mod_classifier_layer.append(torch.nn.LayerNorm(normalized_shape=num_ftrs))    
 
-    if "resnet" in model_name:
+    if "resnet152" == model_name:
         
         mod_classifier_layer.append(torch.nn.Dropout(p = args[cons.P_DROPOUT]))
         mod_classifier_layer.append(model.fc)
         model.fc = torch.nn.Sequential(*mod_classifier_layer)
 
-    elif "densenet" in model_name:
+    elif "densenet121" == model_name:
 
         mod_classifier_layer.append(torch.nn.Dropout(p = args[cons.P_DROPOUT]))
         mod_classifier_layer.append(model.classifier)
@@ -112,14 +112,6 @@ def saving_the_model(args: dict, model):
     torch.save(model.state_dict(),  model_name)
 # -- Fin saving_the_model -- #
 
-# TODO: por completar.
-def inference(args: dict, model, dataloaders, device, num_clases):
-    #model.eval()    
-    evaluate_model(model=model,dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], 
-                      device=device, args=args,
-                      lista_metricas=m.get_list_metrics(num_clases, device))
-# -- Fin inference -- #
-
 def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, nombre_prueba:str="Test"):
     
     if is_main_device:
@@ -185,30 +177,78 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
     outputs = args[cons.NUMBER_CLASSES]
 
     if is_main_device:
-        logger.debug(f"model_weights_path: {model_weights_path}")
-
-    if model_weights_path and os.path.isfile(model_weights_path):        
-        model_weights_path = model_weights_path
-        weights = None
-    else: 
-        weights = cons.DEFAULT_MODEL_WEIGHTS
+        logger.info(f"model_weights_path: {model_weights_path}")
 
     if is_main_device:
-        logger.info(f"Cargando los siguientes pesos: \'{weights if weights is not None else model_weights_path}\'")
+        logger.info(f"Cargando los siguientes pesos: \'{cons.DEFAULT_MODEL_WEIGHTS if model_weights_path is None else model_weights_path}\'")
 
-    model = cons.SWITCH_MODELOS[model_name](weights = weights)
-
-    if fine__tuning: 
-        model = fine_tuning(model=model, model_name=model_name,outputs=outputs, is_main_device=is_main_device)
-                
-    if model_weights_path:
-        # Es importante cargarlo *DESPUES* del fine tuning
-        model.load_state_dict(torch.load(model_weights_path))        
+    if model_weights_path and os.path.isfile(model_weights_path):        
+        model = cons.SWITCH_MODELOS[model_name]()
+    else: 
+        model = cons.SWITCH_MODELOS[model_name](weights = cons.DEFAULT_MODEL_WEIGHTS)                
     
-    model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
-
     #model = model.to(device)
     #if args[cons.IS_DISTRIBUTED]: model = DistributedDataParallel(model, device_ids=[device])
+
+    if fine__tuning: 
+        model = fine_tuning(model=model, model_name=model_name,outputs=outputs, is_main_device=is_main_device)     
+
+    if is_main_device:
+        logger.info(f"modify_model_layers")
+    # TODO: Hacer bien
+    modify_model_layers(model=model, model_name=args[cons.MODEL], args=args)
+    if is_main_device:
+        logger.info(f"model.to(device)")
+    model = model.to(device)
+    if args[cons.IS_DISTRIBUTED]:
+        if is_main_device:
+            logger.info(f"DistributedDataParallel")
+        model = DistributedDataParallel(model, device_ids=[device])   
+
+    if model_weights_path:
+        if is_main_device:
+            logger.info(f"{model_weights_path}\n ----")
+            logger.info(f"module.state_dict():\n{model.state_dict().keys()}")
+
+        state_dict = torch.load(model_weights_path, weights_only=args[cons.INFERENCE])
+
+        if is_main_device:
+            logger.debug(f"state_dict:\n{state_dict.keys()}")    
+
+        # Al menos con ResNet, esto es necesario
+        # Básicamente, no me guarda los pesos del clasificador bien, solo guarda la de la última capa ya que, entiendo, las otras 3 no son necesarias ==> tengo que poner a mano las cosas.
+        if "resnet50" == model_name:
+            if is_main_device:
+                logger.debug('if "resnet50" in model_name:')
+
+            #state_dict["module.fc.3.weight"] = state_dict["module.fc.weight"]
+            #state_dict["module.fc.3.bias"] = state_dict["module.fc.bias"]
+            #del state_dict["module.fc.weight"]
+            #del state_dict["module.fc.bias"]
+        
+        elif "densenet169" == model_name:
+            if is_main_device:
+                logger.debug('if "densenet169" in model_name:')
+
+            #state_dict["module.classifier.0.weight"] = state_dict["module.classifier.weight"]
+            #state_dict["module.classifier.0.bias"] = state_dict["module.classifier.bias"]
+            #state_dict["module.classifier.1.weight"] = state_dict["module.classifier.weight"]
+            #state_dict["module.classifier.1.bias"] = state_dict["module.classifier.bias"]
+            #state_dict["module.classifier.2.weight"] = state_dict["module.classifier.weight"]
+            #state_dict["module.classifier.2.bias"] = state_dict["module.classifier.bias"]
+            #state_dict["module.classifier.3.weight"] = state_dict["module.classifier.weight"]
+            #state_dict["module.classifier.3.bias"] = state_dict["module.classifier.bias"]
+            #del state_dict["module.classifier.weight"]
+            #del state_dict["module.classifier.bias"]
+
+
+        model.load_state_dict(state_dict, strict=True )
+        if is_main_device and "resnet50" == model_name:
+            logger.info(f"module.fc: {model.module.fc}")
+
+ 
+
+    model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
 
     return model
 # -- Fin load_model -- #

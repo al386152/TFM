@@ -1,7 +1,6 @@
 import os
 
 from datetime import datetime
-from torch.nn.parallel import DistributedDataParallel
 from torch import tensor
 
 import utils.arguments_parser as ap
@@ -12,7 +11,7 @@ import utils.training as t
 import utils.model_related as mr
 from utils.log_writer import getLogWritter, set_level
 from utils.metrics import get_list_metrics, logger as metrics_logger
-from utils.data_loaders import load_datasets, load_data_loaders, concat_datasets_and_get_proportion, logger as dl_logger
+from utils.data_loaders import load_datasets, load_data_loaders, concat_datasets_and_get_proportion, load_data_loaders_inference, logger as dl_logger
 from utils.operations import setup_gpu
 from utils.optuna_related import main_optuna
 
@@ -30,50 +29,76 @@ def main(args: dict):
 
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
 
-    # TODO: Hacer bien
-    mr.modify_model_layers(model=model, model_name=args[cons.MODEL], args=args)
-    model = model.to(device)
-    if args[cons.IS_DISTRIBUTED]:
-        model = DistributedDataParallel(model, device_ids=[device])        
-
     if is_main_device:
         logger.info(f"Model: {model}")    
 
     datasets = load_datasets(args, is_main_device)
     if is_main_device:
         logger.debug("\n".join([f"len(dataset): {len(dataset)}\ndataset:\n{dataset}" for dataset in datasets]))
-    
-    if args[cons.BATCH_AUGMENTATION] > 0: 
-        datasets, proporcion_clases = concat_datasets_and_get_proportion(args, datasets, is_main_device)
+
+    if is_main_device:
+        logger.info("Datasets loaded")
+
+    if not args[cons.INFERENCE]:
+        if args[cons.BATCH_AUGMENTATION] > 0: 
+            datasets, proporcion_clases = concat_datasets_and_get_proportion(args, datasets, is_main_device)
+        else:
+            proporcion_clases = get_proporcion_datasets(datasets)
+
+        if is_main_device:
+            logger.info(f"proporcion_clases: {proporcion_clases}")
+        proporcion_clases = tensor(list(proporcion_clases.values()))    
+        proporcion_clases = proporcion_clases.to(device)    
+
+    if not args[cons.INFERENCE]:
+        if is_main_device:
+            logger.info("Load data loaders not inference")
+        data_loaders = load_data_loaders(args, datasets) 
     else:
-        proporcion_clases = get_proporcion_datasets(datasets)
+        if is_main_device:
+            logger.info("Load data loaders inference")
+        data_loaders = load_data_loaders_inference(args, datasets)
+    
+    if is_main_device:
+        logger.info("Dataloaders loaded")
 
-    logger.info(f"proporcion_clases: {proporcion_clases}")
-    proporcion_clases = tensor(list(proporcion_clases.values()))    
-
-    data_loaders = load_data_loaders(args, datasets)
     if is_main_device:
         logger.debug("\n".join([f"len(dataloader): {len(dataloader)}\dataloader:\n{dataloader}" for dataloader in data_loaders]))
 
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
-    if is_main_device:
-        t_inicio = datetime.now()
-    t.train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, lista_metricas=metricas, proporcion_clases=proporcion_clases)
-    if is_main_device:
-        tiempo_entrenamiento = GET_TIME_HMS_FORMAT((datetime.now() - t_inicio))
-        logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
+    #if is_main_device:
+    #    print(f"Main device: {device}")
+    #else:
+    #    print(f"Not main device: {device}")
+
+    if not args[cons.INFERENCE]:
+        # Si no es inferencia, es entrenamiento.
+        if is_main_device:
+            t_inicio = datetime.now()
+        t.train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, lista_metricas=metricas, proporcion_clases=proporcion_clases)
+        if is_main_device:
+            tiempo_entrenamiento = GET_TIME_HMS_FORMAT((datetime.now() - t_inicio))
+            logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
 
     # Evaluando el modelo con el conjunto de "test"    
     if is_main_device:
         logger.info(f"{'-' * cons.NUM_GUIONES} Probando el modelo {'-' * cons.NUM_GUIONES}")
     
-    mr.evaluate_model(model=model, dataloader=data_loaders[cons.TEST_FOLDER_NAME], device=device, 
+    if not args[cons.INFERENCE]:
+        if is_main_device:
+            logger.info("Evaluate model not inference")
+        mr.evaluate_model(model=model, dataloader=data_loaders[cons.TEST_FOLDER_NAME], device=device, 
+                      is_main_device=is_main_device, lista_metricas=metricas, args=args)
+    else:
+        if is_main_device:
+            logger.info("Evaluate models inference")
+        mr.evaluate_model(model=model, dataloader=data_loaders, device=device, 
                       is_main_device=is_main_device, lista_metricas=metricas, args=args)
     if is_main_device:
         logger.info(f"{'-' * cons.NUM_GUIONES} Fin test {'-' * cons.NUM_GUIONES}")
 
-    if is_main_device:
+    if is_main_device and not args[cons.INFERENCE]:
         mr.saving_the_model(args, model)
         logger.info(f"{'-' * cons.NUM_GUIONES} Programa finalizado {'-' * cons.NUM_GUIONES}")
 # -- Fin main -- #

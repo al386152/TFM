@@ -102,6 +102,9 @@ def get_args_parser():
 
     parser.add_argument(f"--{cons.P_DROPOUT}", default=0.0, type=float, help=f"Probabilidad de que la capa de dropout se active")
 
+    parser.add_argument(f"--{cons.INFERENCE}", action='store_true', default=False, 
+                        help=f"True si realizar una inferencia, False si no. Se utilizarán todas las imagenes disponibles en la ruta de los datos.")
+
     return parser
 
 def check_args(args:dict):
