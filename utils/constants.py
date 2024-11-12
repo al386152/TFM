@@ -1,4 +1,5 @@
 from torchvision.models import vgg19, resnet50, resnet152, densenet121, densenet169
+from torch.nn import MSELoss, L1Loss, CrossEntropyLoss
 from torch.optim import SGD, Adam, AdamW
 from logging import _levelToName, INFO
 
@@ -32,6 +33,7 @@ OPTIMIZER = "optimizer"
 BATCH_AUGMENTATION="batch_augmentation"
 P_DROPOUT = "p_dropout"
 INFERENCE = "inference"
+LOSS_FUNCTION = "loss_function"
 
 TEST_DATA_PATH = "test_path"
 TRAIN_DATA_PATH = "train_path"
@@ -79,11 +81,17 @@ SWITCH_MODELOS = {
 POSSIBLE_MODELS = SWITCH_MODELOS.keys()
 DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 
-POSSIBLE_OPTIMIZERS = ["Adam", "AdamW", "SGD"]
+#POSSIBLE_OPTIMIZERS = ["Adam", "AdamW", "SGD"]
 SWITCH_OPTIMIZERS = {
     "Adam": Adam,
     "AdamW": AdamW,
     "SGD": SGD
+}
+
+SWITCH_LOSS_FUNCTIONS = {
+    "CrossEntropyLoss": CrossEntropyLoss,
+    "MSE": MSELoss, 
+    "MAE": L1Loss
 }
 
 BACKEND = "nccl" # de torch.distributed.init_process_group: ``mpi``, ``gloo``, ``nccl``, and ``ucc``

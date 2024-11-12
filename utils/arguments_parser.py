@@ -98,7 +98,10 @@ def get_args_parser():
         help="True: Se va a realizar una búsqueda de hiperparámetros.")
     
     parser.add_argument(f"--{cons.OPTIMIZER}", default="Adam", type=str, 
-                        help=f"Optimizer's name. Options: {str(cons.POSSIBLE_OPTIMIZERS).replace('[', '').replace(']', '')}")
+                        help=f"Optimizer's name. Options: {str(cons.SWITCH_OPTIMIZERS.keys()).replace('[', '').replace(']', '')}")
+    
+    parser.add_argument(f"--{cons.LOSS_FUNCTION}", default="MSE", type=str, 
+                    help=f"Loss function's name. Options: {str(cons.SWITCH_LOSS_FUNCTIONS.keys()).replace('[', '').replace(']', '')}")
 
     parser.add_argument(f"--{cons.P_DROPOUT}", default=0.0, type=float, help=f"Probabilidad de que la capa de dropout se active")
 

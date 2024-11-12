@@ -156,7 +156,7 @@ def objective(trial:optuna.Trial):
     modify_transformations(datasets, trial)
 
     lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
-    optimizer_name = trial.suggest_categorical("optimizer", cons.POSSIBLE_OPTIMIZERS)
+    optimizer_name = trial.suggest_categorical("optimizer", cons.SWITCH_OPTIMIZERS.keys())
     optimizer = getattr(torch.optim, optimizer_name)(model.parameters(), lr=lr)
     args[cons.BATCH_SIZE] = trial.suggest_int("Batch size", 12, 48, step=6) # Esto se utiliza en "load_data_loaders"
 

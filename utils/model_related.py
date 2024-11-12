@@ -112,7 +112,16 @@ def saving_the_model(args: dict, model):
     torch.save(model.state_dict(),  model_name)
 # -- Fin saving_the_model -- #
 
-def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, nombre_prueba:str="Test"):
+# TODO: Mirar de si hay que darle distintos umbrales de redondeo a cada clase
+def from_regresion_output_to_clasification(outputs):
+    #outputs = torch.round(outputs).int()
+    outputs = torch.ceil(outputs).int()
+
+    return outputs
+# -- Fin from_regresion_output_to_clasification -- #
+
+def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, 
+                   nombre_prueba:str="Test", is_regression:bool=False):
     
     if is_main_device:
         logger.debug(f"evaluate_model - inicio")
@@ -137,6 +146,9 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
                 logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
 
             outputs = model(inputs)
+
+            if is_regression:
+                outputs = from_regresion_output_to_clasification(outputs)
 
             if is_main_device:
                 logger.debug(f"{nombre_prueba} Outputs shape: {outputs.shape}, {nombre_prueba} Labels shape: {labels.shape}")
@@ -191,7 +203,7 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
     #if args[cons.IS_DISTRIBUTED]: model = DistributedDataParallel(model, device_ids=[device])
 
     if fine__tuning: 
-        model = fine_tuning(model=model, model_name=model_name,outputs=outputs, is_main_device=is_main_device)     
+        model = fine_tuning(model=model, model_name=model_name, outputs=outputs, is_main_device=is_main_device)     
 
     if is_main_device:
         logger.info(f"modify_model_layers")
@@ -220,27 +232,10 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
         if "resnet50" == model_name:
             if is_main_device:
                 logger.debug('if "resnet50" in model_name:')
-
-            #state_dict["module.fc.3.weight"] = state_dict["module.fc.weight"]
-            #state_dict["module.fc.3.bias"] = state_dict["module.fc.bias"]
-            #del state_dict["module.fc.weight"]
-            #del state_dict["module.fc.bias"]
         
         elif "densenet169" == model_name:
             if is_main_device:
                 logger.debug('if "densenet169" in model_name:')
-
-            #state_dict["module.classifier.0.weight"] = state_dict["module.classifier.weight"]
-            #state_dict["module.classifier.0.bias"] = state_dict["module.classifier.bias"]
-            #state_dict["module.classifier.1.weight"] = state_dict["module.classifier.weight"]
-            #state_dict["module.classifier.1.bias"] = state_dict["module.classifier.bias"]
-            #state_dict["module.classifier.2.weight"] = state_dict["module.classifier.weight"]
-            #state_dict["module.classifier.2.bias"] = state_dict["module.classifier.bias"]
-            #state_dict["module.classifier.3.weight"] = state_dict["module.classifier.weight"]
-            #state_dict["module.classifier.3.bias"] = state_dict["module.classifier.bias"]
-            #del state_dict["module.classifier.weight"]
-            #del state_dict["module.classifier.bias"]
-
 
         model.load_state_dict(state_dict, strict=True )
         if is_main_device and "resnet50" == model_name:

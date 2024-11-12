@@ -113,7 +113,15 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     else:
         print(f"Other_device - len(proporcion_clases): {len(proporcion_clases)}")
 
-    loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
+    #loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
+    if args[cons.LOSS_FUNCTION] == "CrossEntropyLoss":
+        #loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
+        loss_fn = cons.SWITCH_LOSS_FUNCTIONS[cons.LOSS_FUNCTION](weight=proporcion_clases)
+    else:
+        loss_fn = cons.SWITCH_LOSS_FUNCTIONS[cons.LOSS_FUNCTION](reduction="mean")
+        #loss_fn = torch.nn.MSELoss(reduction="mean")
+        #loss_fn = torch.nn.L1Loss(reduction="mean")
+
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
     if args[cons.OPTIMIZER] == "SGD":
@@ -158,7 +166,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
 
         dict_resultados = evaluate_model(model=model, dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], device=device, 
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
-                                         loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation")
+                                         loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation", 
+                                         is_regression = (args[cons.NUMBER_CLASSES] == 1))
     
         scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
 
