@@ -95,7 +95,7 @@ def main(args: dict):
             logger.info("Evaluate models inference")
         mr.evaluate_model(model=model, dataloader=data_loaders, device=device, 
                       is_main_device=is_main_device, lista_metricas=metricas, args=args, 
-                      is_regression=(args[cons.NUMBER_CLASSES] == 1))
+                      is_regression=args[cons.IS_REGRESSION])
     if is_main_device:
         logger.info(f"{'-' * cons.NUM_GUIONES} Fin test {'-' * cons.NUM_GUIONES}")
 

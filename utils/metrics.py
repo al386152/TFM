@@ -10,7 +10,7 @@ from utils.log_writer import getLogWritter
 
 logger = getLogWritter(__name__)
 
-def get_list_metrics(num_classes:int, device, task="multiclass"):
+def get_list_metrics(num_classes:int, device, task = "multiclass"):
     lista_metricas = [ 
             (cons.ACCURACY, Accuracy(task = task, num_classes = num_classes)),
             (cons.AUROC, AUROC(task = task, num_classes = num_classes)),

@@ -108,6 +108,9 @@ def get_args_parser():
     parser.add_argument(f"--{cons.INFERENCE}", action='store_true', default=False, 
                         help=f"True si realizar una inferencia, False si no. Se utilizarán todas las imagenes disponibles en la ruta de los datos.")
 
+    parser.add_argument(f"--{cons.IS_REGRESSION}", action='store_true', default=False,
+                        help="Is a regression model instead of a classifier")
+
     return parser
 
 def check_args(args:dict):

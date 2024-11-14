@@ -34,6 +34,7 @@ BATCH_AUGMENTATION="batch_augmentation"
 P_DROPOUT = "p_dropout"
 INFERENCE = "inference"
 LOSS_FUNCTION = "loss_function"
+IS_REGRESSION = "regression"
 
 TEST_DATA_PATH = "test_path"
 TRAIN_DATA_PATH = "train_path"
