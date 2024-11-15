@@ -10,7 +10,7 @@ from utils.operations import GET_TIME_HMS_FORMAT, get_proporcion_datasets
 import utils.training as t
 import utils.model_related as mr
 from utils.log_writer import getLogWritter, set_level
-from utils.metrics import get_list_metrics, logger as metrics_logger
+from utils.metrics import get_list_metrics, get_regression_list_metrics, logger as metrics_logger
 from utils.data_loaders import load_datasets, load_data_loaders, concat_datasets_and_get_proportion, load_data_loaders_inference, logger as dl_logger
 from utils.operations import setup_gpu
 from utils.optuna_related import main_optuna
@@ -26,6 +26,8 @@ def main(args: dict):
 
     if is_main_device:
         logger.info(f"Device: {device}")
+
+    args[cons.REGRESSION_CLASS_BOUNDARIES] = args[cons.REGRESSION_CLASS_BOUNDARIES].to(device)
 
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
 
@@ -65,6 +67,7 @@ def main(args: dict):
     if is_main_device:
         logger.debug("\n".join([f"len(dataloader): {len(dataloader)}\dataloader:\n{dataloader}" for dataloader in data_loaders]))
 
+    #metricas = get_regression_list_metrics(num_outputs=1, device=device) if args[cons.IS_REGRESSION] else get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
     #if is_main_device:

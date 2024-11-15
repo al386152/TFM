@@ -6,6 +6,8 @@ import logging
 import utils.constants as cons
 from utils.log_writer import getLogWritter
 
+from torch import Tensor
+
 logger = getLogWritter(__name__)
 
 # TODO: Poner la ayuda en un mismo idioma.
@@ -109,7 +111,10 @@ def get_args_parser():
                         help=f"True si realizar una inferencia, False si no. Se utilizarán todas las imagenes disponibles en la ruta de los datos.")
 
     parser.add_argument(f"--{cons.IS_REGRESSION}", action='store_true', default=False,
-                        help="Is a regression model instead of a classifier")
+                        help="Is a regression model instead of a classifier.")
+
+    parser.add_argument(f"--{cons.REGRESSION_CLASS_BOUNDARIES}", type=str, default=f"0{cons.SEPARADOR_CLASS_BOUNDRIES}1{cons.SEPARADOR_CLASS_BOUNDRIES}2{cons.SEPARADOR_CLASS_BOUNDRIES}3{cons.SEPARADOR_CLASS_BOUNDRIES}4",
+                        help="The boundries to convert the regression outputs into classification-like values. The numbers must be separated by '{cons.SEPARADOR_CLASS_BOUNDRIES}' and must be greater than the previous one. The number of boundries must coincide with the number of classes.")
 
     return parser
 
@@ -156,7 +161,26 @@ def check_args(args:dict):
 
     # Generamos una lista de las clases que no hay que aumentar
     args[cons.NO_DATA_AUGMENT_CLASSES] = args[cons.NO_DATA_AUGMENT_CLASSES].split(cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES)
-    
+
+    # Vamos a comprobar que los límites estén bien.
+    if args[cons.IS_REGRESSION]:
+        boundries = args[cons.REGRESSION_CLASS_BOUNDARIES].split(cons.SEPARADOR_CLASS_BOUNDRIES)
+
+        num_boundries = len(boundries)
+
+        if num_boundries < args[cons.NUMBER_CLASSES]:
+            texto = f"The number of boundries is not equal to the number of classes (|{boundries}| != {args[cons.NUMBER_CLASSES]})."
+            logger.error(texto)
+            argparse.ArgumentError(None, texto)
+
+        for i in range(num_boundries-1):
+            if boundries[i] >= boundries[i+1]: 
+                texto = f"Every number must be greater than the previous one {boundries}."
+                logger.error(texto)
+                argparse.ArgumentError(None, texto)
+        
+        args[cons.REGRESSION_CLASS_BOUNDARIES] = Tensor(list(map(int, boundries)))
+
 def get_dict_args():    
      # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):

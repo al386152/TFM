@@ -56,6 +56,10 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
                 logger.info(f"{info}")
 
         inputs, labels = data
+        
+        if args[cons.IS_REGRESSION]:            
+            labels = labels.float()
+
         inputs, labels = inputs.to(device), labels.to(device)
         
         if is_main_device:
@@ -64,10 +68,17 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
 
         optimizer.zero_grad()
         outputs = model(inputs)
-        outputs.to(device)
+        outputs = outputs.to(device)
+
+        if is_main_device:
+            logger.debug(f"outputs shape: {outputs.shape}, outputs: {outputs}")
+
+        if args[cons.IS_REGRESSION]:
+            outputs.reshape(labels.shape)
 
         if args[cons.IS_DISTRIBUTED]:
             torch.distributed.barrier()
+
         loss = loss_func(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -108,17 +119,12 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    if is_main_device:
-        print(f"Main_device - len(proporcion_clases): {len(proporcion_clases)}")
-    else:
-        print(f"Other_device - len(proporcion_clases): {len(proporcion_clases)}")
-
     #loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
     if args[cons.LOSS_FUNCTION] == "CrossEntropyLoss":
         #loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
-        loss_fn = cons.SWITCH_LOSS_FUNCTIONS[cons.LOSS_FUNCTION](weight=proporcion_clases)
+        loss_fn = cons.SWITCH_LOSS_FUNCTIONS[args[cons.LOSS_FUNCTION]](weight=proporcion_clases)
     else:
-        loss_fn = cons.SWITCH_LOSS_FUNCTIONS[cons.LOSS_FUNCTION](reduction="mean")
+        loss_fn = cons.SWITCH_LOSS_FUNCTIONS[args[cons.LOSS_FUNCTION]](reduction="mean")
         #loss_fn = torch.nn.MSELoss(reduction="mean")
         #loss_fn = torch.nn.L1Loss(reduction="mean")
 
@@ -146,6 +152,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         estimacion_fin_todos = "(Tiempo estimado total restante)"
 
     est_duracion_batch = ("(Tiempo estimado por lote)", "(Tiempo estimado total restante)") 
+    main_metric = cons.REGRESSION_MAIN_METRIC if args[cons.IS_REGRESSION] else cons.MAIN_METRIC
 
     num_epochs = args[cons.EPOCS]
     # Entrenando
@@ -167,23 +174,23 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         dict_resultados = evaluate_model(model=model, dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], device=device, 
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
                                          loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation", 
-                                         is_regression = (args[cons.NUMBER_CLASSES] == 1))
+                                         is_regression = args[cons.IS_REGRESSION])
     
         scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
 
-        if dict_resultados[cons.MAIN_METRIC] < best_metric:
-            best_metric = dict_resultados[cons.MAIN_METRIC]
+        if dict_resultados[main_metric] < best_metric:
+            best_metric = dict_resultados[main_metric]
             if is_main_device :
-                model_name = f"{args[cons.MODEL]}_{args[cons.NUMBER_CLASSES]}_{timestamp}.pth"
+                model_name = f"{'regression' if args[cons.IS_REGRESSION] else 'classifier'}_{args[cons.MODEL]}_{args[cons.NUMBER_CLASSES]}_{timestamp}.pth"
                 model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
                                         model_name) 
 
                 torch.save(model.state_dict(), model_path)
 
         # Para el early stopping
-        if early_stopper.early_stop(dict_resultados[cons.MAIN_METRIC]):
+        if early_stopper.early_stop(dict_resultados[main_metric]):
             if is_main_device:
-                logger.info(f"Stopping the training. {cons.MAIN_METRIC}: {dict_resultados[cons.MAIN_METRIC]}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
+                logger.info(f"Stopping the training. {main_metric}: {dict_resultados[main_metric]}, 'patience': {early_stopper.patience}, min_diff: {early_stopper.min_delta}")
             break
 
         if is_main_device:

@@ -1,7 +1,7 @@
 import os
 
 from torchmetrics import Accuracy, AUROC, AveragePrecision, F1Score, ConfusionMatrix
-from datetime import datetime
+from torchmetrics import MeanAbsoluteError, MeanSquaredError, R2Score
 import matplotlib.pyplot as plt
 
 import utils.constants as cons
@@ -18,6 +18,20 @@ def get_list_metrics(num_classes:int, device, task = "multiclass"):
             (cons.F_ONE_SCORE, F1Score(task = task, num_classes = num_classes)),
             (cons.CONFUSION_MATRIX, ConfusionMatrix(task = task, num_classes = num_classes)),
             (cons.NORM_CONFUSION_MATRIX, ConfusionMatrix(task = task, num_classes = num_classes, normalize="true"))]
+    
+    # Moviéndo las métricas al dispositivo que toca.
+    for _, metrica in lista_metricas:
+        metrica.to(device)
+
+    return lista_metricas
+# -- Fin get_list_metrics -- #
+
+def get_regression_list_metrics(num_outputs:int, device):
+    lista_metricas = [ 
+            (cons.MAE, MeanAbsoluteError()),
+            (cons.MSE, MeanSquaredError(num_outputs = num_outputs)),
+            (cons.R2SCORE, R2Score(num_outputs = num_outputs)),
+            ]
     
     # Moviéndo las métricas al dispositivo que toca.
     for _, metrica in lista_metricas:
@@ -44,7 +58,7 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
             if is_main_device:
                 logger.debug(f"{name}")
         
-            resultados[name] =  metric.compute()
+            resultados[name] = metric.compute()
 
             if save_confusion_matrix:
                 
@@ -63,12 +77,15 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                     name_file = os.path.join(path_images_folder, name_file)
 
                     plt.savefig(name_file, dpi=600, bbox_inches ='tight')
-                
+        elif name in [cons.MAE, cons.MSE, cons.R2SCORE]:
+            if is_main_device:
+                logger.info(f"resultados[{name}]: {resultados[name]}")
+            resultados[name] = metric.compute()
         else:            
             if is_main_device:
                 logger.debug(f"Other metric")
 
-            resultados[name] =  metric.compute().item()
+            resultados[name] = metric.compute().item()
     #logger.info(f"Resultados: {resultados}")
     return resultados
 # -- Fin get_metrics -- #

@@ -107,18 +107,51 @@ def fine_tuning(model, model_name, outputs, is_main_device):
 def saving_the_model(args: dict, model):
     # Esta función se tiene que ejecutar solo en un único hilo.
 
-    model_name = OUTPUT_MODEL_NAME(name=args[cons.MODEL], number_clases=args[cons.NUMBER_CLASSES])    
+    model_name = OUTPUT_MODEL_NAME(name=args[cons.MODEL], number_clases=args[cons.NUMBER_CLASSES], 
+                                   is_regression=args[cons.IS_REGRESSION])    
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
     torch.save(model.state_dict(),  model_name)
 # -- Fin saving_the_model -- #
 
-# TODO: Mirar de si hay que darle distintos umbrales de redondeo a cada clase
-def from_regresion_output_to_clasification(outputs):
-    #outputs = torch.round(outputs).int()
-    outputs = torch.ceil(outputs).int()
+
+def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Tensor):
+
+    print(f"outputs - pre | type: {outputs.dtype} |\n{outputs}")
+    #boundaries = torch.Tensor(boundaries)
+    outputs = torch.bucketize(input=outputs, boundaries=boundaries)
+    print(f"outputs - post | type: {outputs.dtype} |\n{outputs}")
+
 
     return outputs
-# -- Fin from_regresion_output_to_clasification -- #
+    
+    # Se espera que la salida sea un conjunto de vectores con el valor de cada clase.
+    #addapted_output = list()
+#
+    #for ouput in outputs:        
+    #    mod_ouput = [0] * num_classes
+    #    mod_ouput[ouput[0]] = 1
+    #    addapted_output.append(mod_ouput)
+#
+    #addapted_output = torch.Tensor(addapted_output)
+    #print(f"addapted_output | type: {addapted_output.dtype} | size: {addapted_output.size()} |\n{addapted_output}")    
+#
+    #return addapted_output
+# -- Fin from_regression_to_classification -- #
+
+def prepare_regression_data_for_metrics(outputs:torch.Tensor, num_classes:int, device):
+
+    addapted_output = list()
+
+    for ouput in outputs:        
+        mod_ouput = [0] * num_classes
+        mod_ouput[ouput[0]] = 1
+        addapted_output.append(mod_ouput)
+
+    #return torch.Tensor(addapted_output)
+    addapted_output = torch.Tensor(addapted_output)
+    print(f"addapted_output | type: {addapted_output.dtype} | size: {addapted_output.size()} |\n{addapted_output}")    
+
+    return addapted_output.to(device)
 
 def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, 
                    nombre_prueba:str="Test", is_regression:bool=False):
@@ -139,23 +172,36 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
                 info_print = f"{nombre_prueba} - Batch: [{i + 1}/{num_elementos}]"
                 logger.info(info_print)
 
+            if args[cons.IS_REGRESSION]:
+                labels = labels.float()
+                labels = torch.squeeze(labels)
+
             inputs, labels = inputs.to(device), labels.to(device)
 
             if is_main_device:
                 logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
-                logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
+                logger.info(f"Labels shape: {labels.shape}, labels: {labels}")
 
-            outputs = model(inputs)
+            outputs = model(inputs)            
 
             if is_regression:
-                outputs = from_regresion_output_to_clasification(outputs)
+                if is_main_device:
+                    logger.info(f"boundaries: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
+                outputs = from_regression_to_classification(outputs=outputs, boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES])
+                #torch.bucketize(input=outputs, boundaries=args[cons.REGRESSION_CLASS_BOUNDRIES])
+    
+            outputs = outputs.to(device)
 
             if is_main_device:
                 logger.debug(f"{nombre_prueba} Outputs shape: {outputs.shape}, {nombre_prueba} Labels shape: {labels.shape}")
-
+                logger.info(f"Outputs shape: {outputs.shape}, Outputs: {outputs}")
+                
             if loss_fn != None:
                 loss = loss_fn(outputs, labels)
                 running_val_loss += loss
+            
+            if is_regression:
+                outputs = prepare_regression_data_for_metrics(outputs=outputs, num_classes=args[cons.NUMBER_CLASSES], device=device)
 
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
@@ -186,7 +232,7 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
     model = None
     model_name = args[cons.MODEL]
     model_weights_path = args[cons.MODEL_WEIGHTS]
-    outputs = args[cons.NUMBER_CLASSES]
+    outputs = args[cons.NUMBER_CLASSES] if not args[cons.IS_REGRESSION] else 1
 
     if is_main_device:
         logger.info(f"model_weights_path: {model_weights_path}")
@@ -240,9 +286,7 @@ def load_model(args: dict, device, is_main_device, fine__tuning:bool = True) -> 
         model.load_state_dict(state_dict, strict=True )
         if is_main_device and "resnet50" == model_name:
             logger.info(f"module.fc: {model.module.fc}")
-
- 
-
+            
     model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
 
     return model
