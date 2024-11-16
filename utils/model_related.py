@@ -121,16 +121,19 @@ def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Ten
     outputs = torch.bucketize(input=outputs, boundaries=boundaries)    
     outputs = outputs.to(torch.int)
     # Al parecer, hay algún caso en el que se pasa a una clase inexistente
-    outputs.apply_(lambda x: (x if x < num_classes else num_classes-1) )
+    # apply_ solo se puede hacer en tensores en la CPU :)
+    #outputs.apply_(lambda x: (x if x < num_classes else num_classes-1) )
     #print(f"outputs - post | type: {outputs.dtype} |\n{outputs}")
 
     # Se preparan los datos en el formato esperado para las métricas.
     addapted_output = list()
 
-    print("ouput[0]: {ouput[0]}")
+    print(f"ouput[0]: {ouput[0]}")
     for ouput in outputs:        
         mod_ouput = [0] * num_classes
-        mod_ouput[ouput[0]] = 1
+        # Al parecer, hay algún caso en el que se pasa a una clase inexistente, como explico arriba.
+        clase = ouput[0] if ouput[0] < num_classes else num_classes - 1
+        mod_ouput[clase] = 1
         addapted_output.append(mod_ouput)
 
     #return torch.Tensor(addapted_output)
