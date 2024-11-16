@@ -27,7 +27,8 @@ def main(args: dict):
     if is_main_device:
         logger.info(f"Device: {device}")
 
-    args[cons.REGRESSION_CLASS_BOUNDARIES] = args[cons.REGRESSION_CLASS_BOUNDARIES].to(device)
+    if args[cons.IS_REGRESSION]:
+        args[cons.REGRESSION_CLASS_BOUNDARIES] = args[cons.REGRESSION_CLASS_BOUNDARIES].to(device)
 
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
 
@@ -67,8 +68,8 @@ def main(args: dict):
     if is_main_device:
         logger.debug("\n".join([f"len(dataloader): {len(dataloader)}\dataloader:\n{dataloader}" for dataloader in data_loaders]))
 
-    #metricas = get_regression_list_metrics(num_outputs=1, device=device) if args[cons.IS_REGRESSION] else get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
+    metricas_regresion = get_regression_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
     #if is_main_device:
     #    print(f"Main device: {device}")
@@ -79,7 +80,8 @@ def main(args: dict):
         # Si no es inferencia, es entrenamiento.
         if is_main_device:
             t_inicio = datetime.now()
-        t.train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, lista_metricas=metricas, proporcion_clases=proporcion_clases)
+        t.train_model(args, model=model, dataloaders=data_loaders, is_main_device=is_main_device, device=device, 
+                      lista_metricas=metricas, proporcion_clases=proporcion_clases, metricas_regresion=metricas_regresion)
         if is_main_device:
             tiempo_entrenamiento = GET_TIME_HMS_FORMAT((datetime.now() - t_inicio))
             logger.info(f"Tiempo entrenamiento: {tiempo_entrenamiento}")
@@ -92,13 +94,14 @@ def main(args: dict):
         if is_main_device:
             logger.info("Evaluate model not inference")
         mr.evaluate_model(model=model, dataloader=data_loaders[cons.TEST_FOLDER_NAME], device=device, 
-                      is_main_device=is_main_device, lista_metricas=metricas, args=args)
+                      is_main_device=is_main_device, lista_metricas=metricas, args=args, 
+                      metricas_regression=metricas_regresion)
     else:
         if is_main_device:
             logger.info("Evaluate models inference")
         mr.evaluate_model(model=model, dataloader=data_loaders, device=device, 
                       is_main_device=is_main_device, lista_metricas=metricas, args=args, 
-                      is_regression=args[cons.IS_REGRESSION])
+                      is_regression=args[cons.IS_REGRESSION], metricas_regression=metricas_regresion)
     if is_main_device:
         logger.info(f"{'-' * cons.NUM_GUIONES} Fin test {'-' * cons.NUM_GUIONES}")
 

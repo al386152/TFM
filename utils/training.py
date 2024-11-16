@@ -68,13 +68,14 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
 
         optimizer.zero_grad()
         outputs = model(inputs)
+
+        if args[cons.IS_REGRESSION]:
+            outputs.reshape(labels.shape)
+
         outputs = outputs.to(device)
 
         if is_main_device:
             logger.debug(f"outputs shape: {outputs.shape}, outputs: {outputs}")
-
-        if args[cons.IS_REGRESSION]:
-            outputs.reshape(labels.shape)
 
         if args[cons.IS_DISTRIBUTED]:
             torch.distributed.barrier()
@@ -108,7 +109,7 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
     return estimacion_duracion
 # --  Fin train_one_epoch -- #
 
-def train_model(args: dict, model, dataloaders, is_main_device, device, lista_metricas, proporcion_clases=None):
+def train_model(args: dict, model, dataloaders, is_main_device, device, lista_metricas, proporcion_clases=None, metricas_regresion=None):
     
     if is_main_device:
         logger.info( ('-' * cons.NUM_GUIONES) + "Starting to train the model" + ('-' * cons.NUM_GUIONES) )
@@ -174,7 +175,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         dict_resultados = evaluate_model(model=model, dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], device=device, 
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
                                          loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation", 
-                                         is_regression = args[cons.IS_REGRESSION])
+                                         is_regression = args[cons.IS_REGRESSION], metricas_regression=metricas_regresion)
     
         scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
 
