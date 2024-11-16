@@ -28,9 +28,11 @@ def get_list_metrics(num_classes:int, device, task = "multiclass"):
 
 def get_regression_list_metrics(num_outputs:int, device):
     lista_metricas = [ 
-            (cons.MAE, MeanAbsoluteError()),
-            (cons.MSE, MeanSquaredError(num_outputs = num_outputs)),
-            (cons.R2SCORE, R2Score(num_outputs = num_outputs)),
+            # Este método va inmensamente lento, tanto que me salta el watchdog.
+            # TODO: Mirar de, si eso, hacerlo en la última iteración
+            #(cons.MAE, MeanAbsoluteError()),
+            #(cons.MSE, MeanSquaredError(num_outputs = num_outputs)),
+            #(cons.R2SCORE, R2Score(num_outputs = num_outputs)),
             ]
     
     # Moviéndo las métricas al dispositivo que toca.
@@ -77,10 +79,10 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                     name_file = os.path.join(path_images_folder, name_file)
 
                     plt.savefig(name_file, dpi=600, bbox_inches ='tight')
-        elif name in [cons.MAE, cons.MSE, cons.R2SCORE]:
-            if is_main_device:
-                logger.info(f"resultados[{name}]: {resultados[name]}")
+        elif name == cons.MAE or name == cons.MSE or name == cons.R2SCORE:
             resultados[name] = metric.compute()
+            if is_main_device:
+                logger.debug(f"resultados[{name}]: {resultados[name]}")
         else:            
             if is_main_device:
                 logger.debug(f"Other metric")

@@ -8,7 +8,6 @@ from datetime import datetime
 import torch.distributed
 
 import utils.constants as cons
-import utils.metrics as m
 from utils.operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
 from utils.log_writer import getLogWritter
 from utils.model_related import evaluate_model
@@ -70,7 +69,7 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
         outputs = model(inputs)
 
         if args[cons.IS_REGRESSION]:
-            outputs.reshape(labels.shape)
+            outputs = outputs.reshape(labels.shape)
 
         outputs = outputs.to(device)
 
@@ -153,7 +152,8 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         estimacion_fin_todos = "(Tiempo estimado total restante)"
 
     est_duracion_batch = ("(Tiempo estimado por lote)", "(Tiempo estimado total restante)") 
-    main_metric = cons.REGRESSION_MAIN_METRIC if args[cons.IS_REGRESSION] else cons.MAIN_METRIC
+    #main_metric = cons.REGRESSION_MAIN_METRIC if args[cons.IS_REGRESSION] else cons.MAIN_METRIC
+    main_metric = cons.MAIN_METRIC
 
     num_epochs = args[cons.EPOCS]
     # Entrenando
@@ -175,7 +175,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         dict_resultados = evaluate_model(model=model, dataloader=dataloaders[cons.VALIDATION_FOLDER_NAME], device=device, 
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
                                          loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation", 
-                                         is_regression = args[cons.IS_REGRESSION], metricas_regression=metricas_regresion)
+                                         metricas_regression=metricas_regresion)
     
         scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
 

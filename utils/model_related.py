@@ -114,31 +114,15 @@ def saving_the_model(args: dict, model):
 # -- Fin saving_the_model -- #
 
 
-def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Tensor):
+def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Tensor, num_classes:int, device):
 
     #print(f"outputs - pre | type: {outputs.dtype} |\n{outputs}")
-    #boundaries = torch.Tensor(boundaries)
-    outputs = torch.bucketize(input=outputs, boundaries=boundaries)
+    # Se ponen los datos en la clase que les tocaría
+    outputs = torch.bucketize(input=outputs, boundaries=boundaries)    
+    outputs = outputs.to(torch.int)
     #print(f"outputs - post | type: {outputs.dtype} |\n{outputs}")
 
-    return outputs
-    
-    # Se espera que la salida sea un conjunto de vectores con el valor de cada clase.
-    #addapted_output = list()
-#
-    #for ouput in outputs:        
-    #    mod_ouput = [0] * num_classes
-    #    mod_ouput[ouput[0]] = 1
-    #    addapted_output.append(mod_ouput)
-#
-    #addapted_output = torch.Tensor(addapted_output)
-    #print(f"addapted_output | type: {addapted_output.dtype} | size: {addapted_output.size()} |\n{addapted_output}")    
-#
-    #return addapted_output
-# -- Fin from_regression_to_classification -- #
-
-def prepare_regression_data_for_metrics(outputs:torch.Tensor, num_classes:int, device):
-
+    # Se preparan los datos en el formato esperado para las métricas.
     addapted_output = list()
 
     for ouput in outputs:        
@@ -152,8 +136,9 @@ def prepare_regression_data_for_metrics(outputs:torch.Tensor, num_classes:int, d
 
     return addapted_output.to(device)
 
+
 def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, 
-                   nombre_prueba:str="Test", is_regression:bool=False, metricas_regression:list=None):
+                   nombre_prueba:str="Test", metricas_regression:list=None):
     
     if is_main_device:
         logger.debug(f"evaluate_model - inicio")
@@ -171,38 +156,37 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
                 info_print = f"{nombre_prueba} - Batch: [{i + 1}/{num_elementos}]"
                 logger.info(info_print)
 
-            if args[cons.IS_REGRESSION]:
-                #labels = labels.float()
-                labels = torch.squeeze(labels)
+            #if args[cons.IS_REGRESSION]:
+            #    #labels = labels.float()
+            #    labels = torch.squeeze(labels)
+            #    #labels = labels.to(torch.int)
 
             inputs, labels = inputs.to(device), labels.to(device)
 
             if is_main_device:
                 logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
-                logger.info(f"Labels shape: {labels.shape}, labels: {labels}")
+                logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
 
             outputs = model(inputs)            
-
-            if is_regression:
-                if is_main_device:
-                    logger.info(f"boundaries: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
-                regression_outputs = outputs.reshape(labels.shape).to(device)
-                outputs = from_regression_to_classification(outputs=outputs, boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES])
-                #torch.bucketize(input=outputs, boundaries=args[cons.REGRESSION_CLASS_BOUNDRIES])
     
             outputs = outputs.to(device)
 
             if is_main_device:
                 logger.debug(f"{nombre_prueba} Outputs shape: {outputs.shape}, {nombre_prueba} Labels shape: {labels.shape}")
-                logger.info(f"Outputs shape: {outputs.shape}, Outputs: {outputs}")
+                logger.debug(f"Outputs shape: {outputs.shape}, Outputs: {outputs}")
                 
             if loss_fn != None:
                 loss = loss_fn(outputs, labels)
                 running_val_loss += loss
             
-            if is_regression:
+            if args[cons.IS_REGRESSION]:
+                if is_main_device:
+                    logger.debug(f"boundaries: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
+
+                regression_outputs = outputs.reshape(labels.shape).to(device)
                 m.update_metrics(metricas_regression, outputs=regression_outputs, labels=labels)
-                outputs = prepare_regression_data_for_metrics(outputs=outputs, num_classes=args[cons.NUMBER_CLASSES], device=device)
+                outputs = from_regression_to_classification(outputs=outputs, boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES], 
+                                                            num_classes=args[cons.NUMBER_CLASSES], device=device)
                 
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
 
@@ -220,12 +204,16 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
         for name in dict_resultados:            
             logger.info(f"{name}:\n{dict_resultados[name]}" if (name == cons.CONFUSION_MATRIX or name == cons.NORM_CONFUSION_MATRIX)  \
                         else f"{name}: {dict_resultados[name]:.4f}")
-    
-        if is_regression:
+
+        # TODO: Revisar por qué no funciona bien las métricas de la regresión.
+        if args[cons.IS_REGRESSION]:
             dict_resultados_regresion = m.get_metrics(metricas_regression, args=args, save_confusion_matrix=save_confusion_matrix, 
                                                         is_main_device=is_main_device)        
+            #print(f"dict_resultados_regresion: {dict_resultados_regresion}")
             for name in dict_resultados_regresion:
                 logger.info(f"{name}:\n{dict_resultados[name]}")
+        
+            m.reset_list_metrics(metricas_regression)
 
     m.reset_list_metrics(lista_metricas)
 
