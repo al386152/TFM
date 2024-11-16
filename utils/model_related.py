@@ -116,11 +116,10 @@ def saving_the_model(args: dict, model):
 
 def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Tensor):
 
-    print(f"outputs - pre | type: {outputs.dtype} |\n{outputs}")
+    #print(f"outputs - pre | type: {outputs.dtype} |\n{outputs}")
     #boundaries = torch.Tensor(boundaries)
     outputs = torch.bucketize(input=outputs, boundaries=boundaries)
-    print(f"outputs - post | type: {outputs.dtype} |\n{outputs}")
-
+    #print(f"outputs - post | type: {outputs.dtype} |\n{outputs}")
 
     return outputs
     
@@ -149,7 +148,7 @@ def prepare_regression_data_for_metrics(outputs:torch.Tensor, num_classes:int, d
 
     #return torch.Tensor(addapted_output)
     addapted_output = torch.Tensor(addapted_output)#.to(torch.int)
-    print(f"addapted_output | type: {addapted_output.dtype} | size: {addapted_output.size()} |\n{addapted_output}")    
+    #print(f"addapted_output | type: {addapted_output.dtype} | size: {addapted_output.size()} |\n{addapted_output}")    
 
     return addapted_output.to(device)
 
