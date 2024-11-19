@@ -128,7 +128,7 @@ def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Ten
     # Se preparan los datos en el formato esperado para las métricas.
     addapted_output = list()
 
-    print(f"ouput[0]: {ouput[0]}")
+    #print(f"ouput[0]: {ouput[0]}")
     for ouput in outputs:        
         mod_ouput = [0] * num_classes
         # Al parecer, hay algún caso en el que se pasa a una clase inexistente, como explico arriba.
