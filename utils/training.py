@@ -37,9 +37,7 @@ class EarlyStopper:
 
 def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
                     loss_func, optimizer = None, is_main_device=True, debuging=False):
-    
-    #optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9) if optimizer is None else optimizer    
-    
+        
     size_batches = len(training_loader)    
     log_info_cada = int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) if int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
 
@@ -119,14 +117,10 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    #loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
     if args[cons.LOSS_FUNCTION] == "CrossEntropyLoss":
-        #loss_fn = torch.nn.CrossEntropyLoss(weight=proporcion_clases)
         loss_fn = cons.SWITCH_LOSS_FUNCTIONS[args[cons.LOSS_FUNCTION]](weight=proporcion_clases)
     else:
         loss_fn = cons.SWITCH_LOSS_FUNCTIONS[args[cons.LOSS_FUNCTION]](reduction="mean")
-        #loss_fn = torch.nn.MSELoss(reduction="mean")
-        #loss_fn = torch.nn.L1Loss(reduction="mean")
 
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
