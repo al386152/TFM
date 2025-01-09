@@ -14,6 +14,9 @@ En este fichero se declaran todas las constantes del programa, por ejemplo, todo
 ## data_loaders.py
 En este fichero se recoge todo el código relacionado con la carga de los datos, sus transformaciones y la generación de los "samplers".
 
+## ensemble.py
+En este fichero se recoge todo el código relacionado con la generación de "Ensembles", es decir, de modelos formados por un conjunto de otros modelos.
+
 ## log_writer.py
 En este fichero se encuentra el código relacionado con los "logs", incluyendo la redirección de las salidas a un fichero y a la salida estándar o el establecimiento del nivel del "log" (información, debug, etc.).
 

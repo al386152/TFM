@@ -14,6 +14,7 @@ from utils.metrics import get_list_metrics, get_regression_list_metrics, logger 
 from utils.data_loaders import load_datasets, load_data_loaders, concat_datasets_and_get_proportion, load_data_loaders_inference, logger as dl_logger
 from utils.operations import setup_gpu
 from utils.optuna_related import main_optuna
+from utils.ensemble import logger as ensemble_logger
 
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
@@ -114,7 +115,7 @@ if __name__ == "__main__":
     args = ap.get_dict_args()
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
     # Esto lo hago así porque no se me ha ocurrido de otra forma de poner el nivel correcto a todos los loggers de todos los scripts
-        lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger]
+        lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger, ensemble_logger]
         set_level(lista_loggers, cons.loggin_level)
     
     if args[cons.IS_HYPERTUNING]:
