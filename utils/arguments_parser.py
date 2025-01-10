@@ -56,8 +56,7 @@ def get_args_parser():
                         help="device to use for training / testing")
     
     parser.add_argument(f"--{cons.MODEL}", default="vgg19", type=str,
-                        help="The model's name")
-                        #help="Path to the local model or the model's name")
+                        help=f"The model's name or, if it's a ensemble, a list of models separated by {cons.SEPARADOR_ENSEMBLE}. Example: vgg19{cons.SEPARADOR_ENSEMBLE}resnet50")
     
     parser.add_argument(f"--{cons.PARTIAL_MODELS_PATH}", default="./partial_models", type=str,
                     help="Path to the folder where the best models will be stored")    
@@ -80,6 +79,13 @@ def get_args_parser():
     parser.add_argument(f"--{cons.IS_DISTRIBUTED}", action='store_true', default=False,
             help="True: the training is distributed. False: the training is only local.")
 
+    parser.add_argument(f"--{cons.ENSEMBLE_VOTATION_WEIGHTS}", default="1,1,1,1,1", 
+                        help=f"""Los pesos de cada modelo para cada clase durante las votaciones. 
+                        Los pesos de cada clase están separados por {cons.SEPARATOR_VOTATION_CLASS} y los modelos por {cons.SEPARATOR_VOTATION_MODEL}.
+                        A cada clase se le asigna la lista de pesos de la votación en el mismo orden que se han pasado en el parámetro '--{cons.MODEL}'.
+                        Ejemplo con 3 clases y dos modelos: --{cons.MODEL} \"vgg19{cons.SEPARADOR_ENSEMBLE}resnet50\". --{cons.ENSEMBLE_VOTATION_WEIGHTS} \"1{cons.SEPARATOR_VOTATION_CLASS}0.5{cons.SEPARATOR_VOTATION_CLASS}0.1{cons.SEPARATOR_VOTATION_MODEL}0.5{cons.SEPARATOR_VOTATION_CLASS}1.3{cons.SEPARATOR_VOTATION_CLASS}0.8\"
+                        """)
+    
 
     parser.add_argument(f"--{cons.ROTATION_DEGREES}", default=75, type=float, help=f"Grados de rotación máxima que pueden tener las imágenes.")
     parser.add_argument(f"--{cons.RANDOM_PERSPECTIVE_DISTORSION}", default=0.75, type=float, help=f"Escala de la distorsión de la transformación.")
@@ -117,22 +123,45 @@ def get_args_parser():
                         help="The boundries to convert the regression outputs into classification-like values. The numbers must be separated by '{cons.SEPARADOR_CLASS_BOUNDRIES}' and must be greater than the previous one. The number of boundries must coincide with the number of classes.")
 
     return parser
+# -- Fin get_args_parser -- #
 
-def check_args(args:dict):
+def check_and_set_models(args:dict):
+    # Comprobamos el modelo (o modelos si son unensemble)
+    models = args[cons.MODEL].split(cons.SEPARADOR_ENSEMBLE)
+    for model in models:
+        if model not in cons.POSSIBLE_MODELS:
+            texto = f"{model}. Received: {args[cons.MODEL]}. Expected one of {str(cons.POSSIBLE_MODELS)}"
+            # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
+            if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):        
+                logger.error(texto)
+            argparse.ArgumentError(None, texto)    
+    print(f"models: {models}") # TODO: BORRAR
+    args[cons.MODEL] = models
+# -- Fin check_modelos -- #
 
-    # Comprobamos el modelo
-    if args[cons.MODEL] not in cons.POSSIBLE_MODELS:
-        texto = f"{cons.MODEL}. Received: {args[cons.MODEL]}. Expected one of {str(cons.POSSIBLE_MODELS)}"
-         # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
-        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):        
+def check_and_set_votation_weights(args:dict):
+    votation_weights = args[cons.ENSEMBLE_VOTATION_WEIGHTS].split(cons.SEPARATOR_VOTATION_MODEL)
+
+    num_modelos = len(args[cons.MODEL])
+    if len(votation_weights) != num_modelos:
+        texto = f"El número de pesos de las votación ({len(votation_weights)}) no coincide con el número de modelos({num_modelos}). "
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.error(texto)
-        argparse.ArgumentError(None, texto)
+        argparse.ArgumentError(None, texto)   
 
+    args[cons.ENSEMBLE_VOTATION_WEIGHTS] = {args[cons.MODEL][i] : list(map(float, votation_weights[i].split(cons.SEPARATOR_VOTATION_CLASS))) 
+                                            for i in range(num_modelos)}
+    print(f"args[{cons.ENSEMBLE_VOTATION_WEIGHTS}]: {args[cons.ENSEMBLE_VOTATION_WEIGHTS]}") # TODO: BORRAR
+# -- Fin check_votation_weights -- #
+
+def check_and_set_debug_options(args:dict): 
     # Comprobamos si mostrar las opciones de debug
     if args[cons.SHOW_DEBUG_OUTPUTS]:
         cons.loggin_level = logging._levelToName[logging.DEBUG]
     #else: logging._levelToName(logging.INFO)
+# -- Fin check_and_set_debug_options -- #
 
+def check_and_set_transformations(args:dict):
     # Ponemos como toca la altura y la anchura
     sizes = args[cons.INPUT_SIZE].split(cons.SEPARADOR_INPUT_IMAGENES)    
     args[cons.ALTURA_IMG] = int(sizes[0])
@@ -142,7 +171,9 @@ def check_args(args:dict):
     for color_jitter_op in [cons.COLOR_JITTER_BRIGHTNESS, cons.COLOR_JITTER_CONTRAST, cons.COLOR_JITTER_SATURATION, cons.COLOR_JITTER_HUE]:
         splitted = args[color_jitter_op].split(cons.SEPARADOR_INPUTS_COLOR_JITTER)
         args[color_jitter_op] = (float(splitted[0]), float(splitted[1])) if len(splitted) > 1 else float(splitted[0])
+# -- Fin check_and_set_transformations -- #
 
+def check_and_set_split_percentages(args:dict):
     # Poniendo como tocan los porcentajes
     if args[cons.SPLIT_PERCENTAGES] is None:
         args[cons.SPLIT_PERCENTAGES] = cons.DEFAULT_TRAIN_VAL_TEST_PERCENTAGES
@@ -158,11 +189,15 @@ def check_args(args:dict):
 
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.debug(f"Después: {args[cons.SPLIT_PERCENTAGES][i]}")
+# -- Fin check_and_set_split_percentages -- #
 
+def set_list_no_augment_classes(args:dict):
     # Generamos una lista de las clases que no hay que aumentar
     args[cons.NO_DATA_AUGMENT_CLASSES] = args[cons.NO_DATA_AUGMENT_CLASSES].split(cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES)
+# -- Fin set_list_no_augment_classes -- #
 
-    # Vamos a comprobar que los límites estén bien.
+def check_and_set_regression_boundaries(args:dict):
+        # Vamos a comprobar que los límites estén bien.
     if args[cons.IS_REGRESSION]:
         boundries = args[cons.REGRESSION_CLASS_BOUNDARIES].split(cons.SEPARADOR_CLASS_BOUNDRIES)
 
@@ -180,6 +215,18 @@ def check_args(args:dict):
                 argparse.ArgumentError(None, texto)
         
         args[cons.REGRESSION_CLASS_BOUNDARIES] = Tensor(list(map(int, boundries)))
+# -- Fin check_and_set_regression_boundaries -- #
+
+def check_args(args:dict):
+    check_and_set_models(args)
+    check_and_set_votation_weights(args)
+    check_and_set_debug_options(args)
+    check_and_set_transformations(args)
+    check_and_set_split_percentages(args)
+    set_list_no_augment_classes(args)
+    check_and_set_regression_boundaries(args)
+# -- Fin check_args -- #
+
 
 def get_dict_args():    
      # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
@@ -196,7 +243,7 @@ def get_dict_args():
                     '\n' + ('-' * cons.NUM_GUIONES)
                     )
     return args
-
+# -- Fin get_dict_args -- #
 
 #test
 if __name__ == "__main__":
