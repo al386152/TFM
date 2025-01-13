@@ -1,6 +1,7 @@
 import os
 
 import torch
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.distributed import barrier
 
 from datetime import datetime
@@ -36,7 +37,7 @@ class EarlyStopper:
 
 
 def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
-                    loss_func, optimizer = None, is_main_device=True, debuging=False):
+                    loss_func, list_optimizers = None, is_main_device=True, debuging=False):
         
     size_batches = len(training_loader)    
     log_info_cada = int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) if int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
@@ -63,7 +64,8 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
             logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
             logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
 
-        optimizer.zero_grad()
+        for optimizer in list_optimizers:
+            optimizer.zero_grad()
         outputs = model(inputs)
 
         if args[cons.IS_REGRESSION]:
@@ -79,7 +81,8 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
 
         loss = loss_func(outputs, labels)
         loss.backward()
-        optimizer.step()
+        for optimizer in list_optimizers:
+            optimizer.step()
         
         if is_main_device:
             if debuging or (i % log_info_cada == 0):
@@ -124,12 +127,19 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
 
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
-    if args[cons.OPTIMIZER] == "SGD":
-        optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)
-    else:
-        optimizer = cons.SWITCH_OPTIMIZERS[args[cons.OPTIMIZER]](model.parameters(), lr=args[cons.LEARNING_RATE])
-
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE)
+    
+    list_optimizers = list()
+    list_schedulers = list()
+    list_models = model.get_list_models()
+    for i in range(len(args[cons.OPTIMIZER])):
+        optim = args[cons.OPTIMIZER][i]        
+        if optim == "SGD":
+            optimizer = cons.SWITCH_OPTIMIZERS[optim](list_models[i].parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)                
+        else: 
+            optimizer = cons.SWITCH_OPTIMIZERS[optim](list_models[i].parameters(), lr=args[cons.LEARNING_RATE])
+        list_optimizers.append(optimizer)        
+        list_schedulers.append(ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE))
+    
 
     # Creando carpetas para las salidas  
     if not os.path.isdir(partial_models_path) and is_main_device:
@@ -161,7 +171,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         model.train(True)
         est_duracion_batch = train_one_epoch(args=args, model=model, device=device, 
                                              training_loader=dataloaders[cons.TRAIN_FOLDER_NAME],  
-                                             loss_func=loss_fn, optimizer=optimizer, 
+                                             loss_func=loss_fn, list_optimizers=list_optimizers, 
                                              estimacion_duracion=est_duracion_batch, 
                                              is_main_device=is_main_device, 
                                              debuging=args[cons.SHOW_DEBUG_OUTPUTS])
@@ -170,8 +180,9 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                                          is_main_device=is_main_device, lista_metricas=lista_metricas, args=args, 
                                          loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation", 
                                          metricas_regression=metricas_regresion)
-    
-        scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
+
+        for scheduler in list_schedulers:
+            scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
 
         if dict_resultados[main_metric] < best_metric:
             best_metric = dict_resultados[main_metric]

@@ -48,7 +48,6 @@ def get_args_parser():
                         \"Train{cons.SEPARADOR_SPLIT_PERCENTAGES}Validation{cons.SEPARADOR_SPLIT_PERCENTAGES}Test\". \
                         If you have the train and validation data in one folder: \"Train{cons.SEPARADOR_SPLIT_PERCENTAGES}Validation\".")                        
 
-
     parser.add_argument(f"--{cons.OUTPUT_DIR}", default="./output_dir", type=str,
                         help="path where to save, empty for no saving")
     
@@ -86,7 +85,6 @@ def get_args_parser():
                         Ejemplo con 3 clases y dos modelos: --{cons.MODEL} \"vgg19{cons.SEPARADOR_ENSEMBLE}resnet50\". --{cons.ENSEMBLE_VOTATION_WEIGHTS} \"1{cons.SEPARATOR_VOTATION_CLASS}0.5{cons.SEPARATOR_VOTATION_CLASS}0.1{cons.SEPARATOR_VOTATION_MODEL}0.5{cons.SEPARATOR_VOTATION_CLASS}1.3{cons.SEPARATOR_VOTATION_CLASS}0.8\"
                         """)
     
-
     parser.add_argument(f"--{cons.ROTATION_DEGREES}", default=75, type=float, help=f"Grados de rotación máxima que pueden tener las imágenes.")
     parser.add_argument(f"--{cons.RANDOM_PERSPECTIVE_DISTORSION}", default=0.75, type=float, help=f"Escala de la distorsión de la transformación.")
     parser.add_argument(f"--{cons.P_HORIZONTAL_FLIP}", default=0.2, type=float, help=f"Probabilidad de que se realize un giro horizontal de la imagen.")
@@ -106,7 +104,8 @@ def get_args_parser():
         help="True: Se va a realizar una búsqueda de hiperparámetros.")
     
     parser.add_argument(f"--{cons.OPTIMIZER}", default="Adam", type=str, 
-                        help=f"Optimizer's name. Options: {str(cons.SWITCH_OPTIMIZERS.keys()).replace('[', '').replace(']', '')}")
+                        help=f"""List of optimizer's names separated by \"{cons.SEPARADOR_SPLIT_OPTIMIZERS}\" (Example: Adam,SGD). The number of optimizers must be the same as the number of models, and the optimizer number "i" will be associated to the model number "i" passed as parameter.
+                        Options: {str(cons.SWITCH_OPTIMIZERS.keys()).replace('[', '').replace(']', '')}""")
     
     parser.add_argument(f"--{cons.LOSS_FUNCTION}", default="MSE", type=str, 
                     help=f"Loss function's name. Options: {str(cons.SWITCH_LOSS_FUNCTIONS.keys()).replace('[', '').replace(']', '')}")
@@ -144,7 +143,7 @@ def check_and_set_votation_weights(args:dict):
 
     num_modelos = len(args[cons.MODEL])
     if len(votation_weights) != num_modelos:
-        texto = f"El número de pesos de las votación ({len(votation_weights)}) no coincide con el número de modelos({num_modelos}). "
+        texto = f"El número de pesos de las votación ({len(votation_weights)}) no coincide con el número de modelos ({num_modelos})."
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.error(texto)
         argparse.ArgumentError(None, texto)   
@@ -154,12 +153,12 @@ def check_and_set_votation_weights(args:dict):
     print(f"args[{cons.ENSEMBLE_VOTATION_WEIGHTS}]: {args[cons.ENSEMBLE_VOTATION_WEIGHTS]}") # TODO: BORRAR
 # -- Fin check_votation_weights -- #
 
-def check_and_set_debug_options(args:dict): 
+def set_debug_options(args:dict): 
     # Comprobamos si mostrar las opciones de debug
     if args[cons.SHOW_DEBUG_OUTPUTS]:
         cons.loggin_level = logging._levelToName[logging.DEBUG]
     #else: logging._levelToName(logging.INFO)
-# -- Fin check_and_set_debug_options -- #
+# -- Fin set_debug_options -- #
 
 def check_and_set_transformations(args:dict):
     # Ponemos como toca la altura y la anchura
@@ -196,6 +195,26 @@ def set_list_no_augment_classes(args:dict):
     args[cons.NO_DATA_AUGMENT_CLASSES] = args[cons.NO_DATA_AUGMENT_CLASSES].split(cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES)
 # -- Fin set_list_no_augment_classes -- #
 
+def check_and_set_optimizers(args:dict):
+    list_optims = args[cons.OPTIMIZER].split(cons.SEPARADOR_SPLIT_OPTIMIZERS)
+
+    num_modelos = len(args[cons.MODEL])
+    if len(list_optims) != num_modelos:
+        texto = f"El número de optimizadores ({len(list_optims)}) no coincide con el número de modelos ({num_modelos})."
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.error(texto)
+        argparse.ArgumentError(None, texto) 
+
+    for optim in list_optims:
+        if optim not in cons.SWITCH_OPTIMIZERS.keys():
+            texto = f"{optim}. Received: {args[cons.OPTIMIZER]}. Expected one of {str(cons.SWITCH_OPTIMIZERS.keys())}"
+            if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+                logger.error(texto)
+            argparse.ArgumentError(None, texto)
+    args[cons.OPTIMIZER] = list_optims
+
+# -- Fin check_and_set_optimizers -- #    
+
 def check_and_set_regression_boundaries(args:dict):
         # Vamos a comprobar que los límites estén bien.
     if args[cons.IS_REGRESSION]:
@@ -220,11 +239,12 @@ def check_and_set_regression_boundaries(args:dict):
 def check_args(args:dict):
     check_and_set_models(args)
     check_and_set_votation_weights(args)
-    check_and_set_debug_options(args)
+    set_debug_options(args)
     check_and_set_transformations(args)
     check_and_set_split_percentages(args)
     set_list_no_augment_classes(args)
     check_and_set_regression_boundaries(args)
+    check_and_set_optimizers(args)
 # -- Fin check_args -- #
 
 

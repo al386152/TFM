@@ -3,6 +3,8 @@ import torch
 import utils.model_related as mr
 from .log_writer import getLogWritter
 
+from collections import OrderedDict
+
 logger = getLogWritter(__name__)
 
 class Ensemble(torch.nn.Module):
@@ -30,11 +32,15 @@ class Ensemble(torch.nn.Module):
 
         if self.is_main_device:
             logger.debug(f"Ensemble created with the following models:\n{dict_models.keys()}")
+
+    def get_list_models(self):
+        return list(self.dict_models.values())
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         
         models_outputs = list()
-        for name_model, model in self.dict_models:
+        for name_model in self.dict_models.keys():
+            model = self.dict_models[name_model]
             #models_outputs.append(output * self.weight_votations[name_model] )
             output = model(x)
             if self.is_main_device:
@@ -77,17 +83,14 @@ class Ensemble(torch.nn.Module):
     # TODO: Posible solución, hacer que los parámetros del ensemble sean los de todos sus modelos en el constructor (ir sacándolos y añadiéndolos)
     # TODO: Alternativa. Poner un optimizador para cada modelo y aplicar cada optimizador a cada modelo (?)
     # Para que el optimizador no se queje de que no hay parámetros
-    def parameters(self, recurse = True):
-
-        #list_tensors_parameters = [torch.Tensor(list(module.parameters(recurse))) for module in self.dict_models.values()]
-        
-        print(f"self.dict_models.values():\n{self.dict_models.values()}")
-        #list_tensors_parameters = [torch.Tensor(list(module.parameters(recurse))) for module in self.dict_models.values()]
-        list_tensors_parameters = [torch.Tensor(module.parameters(recurse)) for module in self.dict_models.values()]
-
-        print(f"list_tensors_parameters:\n{list_tensors_parameters}")
-
-        return torch.concat(list_tensors_parameters)
-        #return torch.concat([torch.Tensor(list(module.parameters(recurse))) for module in self.dict_models.values()])
-        #return super().parameters(recurse)
+    #def parameters(self, recurse = True):   #
+    #    #list_tensors_parameters = [torch.Tensor(list(module.parameters(recurse))) for module in self.dict_models.values()]
+    #    
+    #    print(f"self.dict_models.values():\n{self.dict_models.values()}")
+    #    #list_tensors_parameters = [torch.Tensor(list(module.parameters(recurse))) for module in self.dict_models.values()]
+    #    list_tensors_parameters = [torch.Tensor(module.parameters(recurse)) for module in self.dict_models.values()]    #
+    #    print(f"list_tensors_parameters:\n{list_tensors_parameters}")   #
+    #    return torch.concat(list_tensors_parameters)
+    #    #return torch.concat([torch.Tensor(list(module.parameters(recurse))) for module in self.dict_models.values()])
+    #    #return super().parameters(recurse)
     
