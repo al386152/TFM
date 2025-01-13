@@ -131,7 +131,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     list_optimizers = list()
     list_schedulers = list()
     list_models = model.get_list_models()
-    for i in range(len(args[cons.OPTIMIZER])):
+    for i in range(len(list_models)):
         optim = args[cons.OPTIMIZER][i]        
         if optim == "SGD":
             optimizer = cons.SWITCH_OPTIMIZERS[optim](list_models[i].parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)                

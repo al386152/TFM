@@ -44,7 +44,6 @@ srun time python3 -m torch.distributed.launch --use_env --nproc_per_node=$num_gr
                             --device cuda  \
                             --data_path "$ruta_datasets/$name_dataset" \
                             --model $model \
-                            --exclusive \
                             --is_distributed    \
                             #--debug 
                             #--patience 5 \
