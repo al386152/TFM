@@ -230,7 +230,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
 def load_model_weights(args: dict, model_name: str, model: torch.nn.Module, model_weights_path:str, is_main_device:bool):
     if is_main_device:
             logger.info(f"{model_weights_path}\n ----")
-            logger.info(f"module.state_dict():\n{model.state_dict().keys()}")
+            logger.debug(f"module.state_dict():\n{model.state_dict().keys()}")
 
     state_dict = torch.load(model_weights_path, weights_only=args[cons.INFERENCE])
 
@@ -266,11 +266,12 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
         logger.info(f"Cargando los siguientes pesos: \'{cons.DEFAULT_MODEL_WEIGHTS if model_weights_path is None else model_weights_path}\'")
 
     dict_models = dict()
-    for model_name in model_names:
+    for i in range(len(model_names)):
+        model_name = model_names[i]
         if is_main_device:
             logger.info(f"Cargando el modelo: {model_name}")        
         
-        if model_weights_path and os.path.isfile(model_weights_path):        
+        if model_weights_path and os.path.isfile(model_weights_path[i]):
             model = cons.SWITCH_MODELOS[model_name]()
         else: 
             model = cons.SWITCH_MODELOS[model_name](weights = cons.DEFAULT_MODEL_WEIGHTS)     
@@ -300,12 +301,12 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
 
         if model_weights_path:
             load_model_weights(args=args, model_name=model_name, model=model, 
-                            model_weights_path=model_weights_path, is_main_device=is_main_device)
+                        model_weights_path=model_weights_path[i], is_main_device=is_main_device)
             
         model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
         dict_models[model_name] = model
 
-    # TODO: Finalizar esto.
+    # TODO: Comprobar de que vaya correctamente
     # Si hay más de un modelo en la lista, es un ensemble y hay que crearlo bien. 
     # -> Si no, es un modelo normal y hay que pasarlo como un modelo (y no como una lista de modelos)
     if len(model_names) > 1:

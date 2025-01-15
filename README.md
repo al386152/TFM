@@ -71,32 +71,23 @@ time python3 -m torch.distributed.launch --nproc_per_node=1 --use_env ./main.py 
                             --batch_augmentation 1 \
                             --p_dropout 0
 ```
-
+Ejemplo inferencia de un "ensemble":
 ```
 time python3 ./main.py \
+    --inference \
     --batch_size 48 \
     --epochs 2 \
     --device cpu  \
-    --data_path "../Datasets/Eyepacs_Aptos_Messidor" \
+    --data_path "../../Datasets/IDRiD" \
     --model "densenet169,resnet50" \
     --num_classes 5 \
     --loss_function CrossEntropyLoss \
-    --patience 3 \
-    --optimizer "SGD" \
-    --lr 0.00899688614556782 \
-    --hue 0 \
-    --saturation 0.1 \
-    --contrast 1 \
-    --brightness 0.4 \
-    --rotation 0 \
-    --random_distorsion 0.3 \
-    --horizontal_flip 0.2 \
-    --vertical_flip 0.4 \
-    --input_size "524" \
-    --batch_augmentation 1 \
-    --p_dropout 0 \
-    --votation_weights 1,0.8,0.7,0.5,0.6#1.2,0.4,0.9,0.1,0.2
+    --optimizer "SGD,Adam" \
+    --votation_weights 1,0.8,0.7,0.5,0.6#1.2,0.4,0.9,0.1,0.2 \
+    --model_weights "..\Pesos\model_densenet169_5_outputs_2024-09-19.pth@..\Pesos\model_resnet50_5_outputs_2024-09-21.pth"
 ```
+
+
 
 # Desinstalación
 ```

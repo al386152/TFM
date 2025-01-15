@@ -61,7 +61,7 @@ def get_args_parser():
                     help="Path to the folder where the best models will be stored")    
 
     parser.add_argument(f"--{cons.MODEL_WEIGHTS}", default=None, type=str,
-                help="Model's weights path")
+                help=f"Model's weights path. In case an ensemble is going to be used, the different paths must be separated by: {cons.SEPARADOR_WEIGTHS_PATHS}. It is assumed that the weights' path is in the same order as the models passed as parameters.")
     
     parser.add_argument(f"--{cons.NO_DATA_AUGMENT_CLASSES}", default='0', type=str,
             help=f"List of classes that will not be augmented separated by a \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
@@ -124,6 +124,26 @@ def get_args_parser():
     return parser
 # -- Fin get_args_parser -- #
 
+def set_weights_paths(args:dict):
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"args[{cons.MODEL_WEIGHTS}]: {args[cons.MODEL_WEIGHTS]}") # TODO: Convertir en debug.
+        logger.info(f"cons.SEPARADOR_WEIGTHS_PATHS]: {cons.SEPARADOR_WEIGTHS_PATHS}") # TODO: Convertir en debug.
+
+    weights = args[cons.MODEL_WEIGHTS].split(cons.SEPARADOR_WEIGTHS_PATHS)
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"weights: {weights}") # TODO: Convertir en debug.
+
+    num_modelos = len(args[cons.MODEL])
+    if len(weights) != num_modelos:
+        texto = f"El rutas a los pesos ({len(weights)}) no coincide con el número de modelos ({num_modelos})."
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.error(texto)
+        argparse.ArgumentError(None, texto)
+
+    args[cons.MODEL_WEIGHTS] = weights
+# -- Fin set_weights_paths -- #
+
+
 def check_and_set_models(args:dict):
     # Comprobamos el modelo (o modelos si son unensemble)
     models = args[cons.MODEL].split(cons.SEPARADOR_ENSEMBLE)
@@ -134,9 +154,8 @@ def check_and_set_models(args:dict):
             if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):        
                 logger.error(texto)
             argparse.ArgumentError(None, texto)    
-    print(f"models: {models}") # TODO: BORRAR
     args[cons.MODEL] = models
-# -- Fin check_modelos -- #
+# -- Fin check_and_set_models -- #
 
 def check_and_set_votation_weights(args:dict):
     votation_weights = args[cons.ENSEMBLE_VOTATION_WEIGHTS].split(cons.SEPARATOR_VOTATION_MODEL)
@@ -150,8 +169,7 @@ def check_and_set_votation_weights(args:dict):
 
     args[cons.ENSEMBLE_VOTATION_WEIGHTS] = {args[cons.MODEL][i] : Tensor(list(map(float, votation_weights[i].split(cons.SEPARATOR_VOTATION_CLASS)))) 
                                             for i in range(num_modelos)}
-    print(f"args[{cons.ENSEMBLE_VOTATION_WEIGHTS}]: {args[cons.ENSEMBLE_VOTATION_WEIGHTS]}") # TODO: BORRAR
-# -- Fin check_votation_weights -- #
+# -- Fin check_and_set_votation_weights -- #
 
 def set_debug_options(args:dict): 
     # Comprobamos si mostrar las opciones de debug
@@ -236,9 +254,10 @@ def check_and_set_regression_boundaries(args:dict):
         args[cons.REGRESSION_CLASS_BOUNDARIES] = Tensor(list(map(int, boundries)))
 # -- Fin check_and_set_regression_boundaries -- #
 
-def check_args(args:dict):
+def check_args(args:dict):    
     check_and_set_models(args)
     check_and_set_votation_weights(args)
+    set_weights_paths(args)
     set_debug_options(args)
     check_and_set_transformations(args)
     check_and_set_split_percentages(args)

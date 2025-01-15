@@ -22,7 +22,7 @@ class Ensemble(torch.nn.Module):
         super().__init__(*args, **kwargs)
         
         if is_main_device:
-            logger.debug("Creating ensemble")
+            logger.info("Creating ensemble")
         self.is_main_device = is_main_device
         self.dict_models = dict_models
         self.weight_votations = weight_votations
@@ -32,7 +32,7 @@ class Ensemble(torch.nn.Module):
         #    mr.transfer_learning(model=model, capas_entrenar_final = 1, is_main_device=is_main_device)
 
         if self.is_main_device:
-            logger.debug(f"Ensemble created with the following models:\n{dict_models.keys()}")
+            logger.info(f"Ensemble created with the following models:\n{dict_models.keys()}")
 
     def get_list_models(self):
         return list(self.dict_models.values())
@@ -40,31 +40,34 @@ class Ensemble(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         
         if self.is_main_device:
-            #logger.info(f"x:\n{x}")
-            #logger.info(f"self.dict_models:\n{self.dict_models}")
-            logger.info(f"self.dict_models.keys():\n{self.dict_models.keys()}")
+            #logger.debug(f"x:\n{x}")
+            #logger.debug(f"self.dict_models:\n{self.dict_models}")
+            logger.debug(f"self.dict_models.keys():\n{self.dict_models.keys()}")
         models_outputs = list()
         for name_model in self.dict_models.keys():            
             model = self.dict_models[name_model]
             #if self.is_main_device:
-            #    logger.info(f"model:\n{model}")
+            #    logger.debug(f"model:\n{model}")
             #models_outputs.append(output * self.weight_votations[name_model] )
             output = model(x)
             if self.is_main_device:
-                #logger.info(f"output:\n{models_outputs}")
-                logger.info(f"type(output): {type(output)}")        
+                #logger.debug(f"output:\n{models_outputs}")
+                logger.debug(f"type(output): {type(output)}")        
 
-                logger.info(f"self.weight_votations: {self.weight_votations}")
-                logger.info(f"type(self.weight_votations): {type(self.weight_votations)}")
+                logger.debug(f"self.weight_votations: {self.weight_votations}")
+                logger.debug(f"type(self.weight_votations): {type(self.weight_votations)}")
+
+            if self.is_main_device:
+                logger.info(f"output: {output}") # TODO: Borrar
 
             output *= self.weight_votations[name_model]
             if self.is_main_device:
-                logger.info(f"output - tras producto:\n{output}")
+                logger.debug(f"output - tras producto:\n{output}")
             models_outputs.append(output)
 
         if self.is_main_device:
-            logger.info(f"Models outputs - post weighted:\n{models_outputs}")
-            logger.info(f"type(models_outputs]): {type(models_outputs)}")
+            logger.debug(f"Models outputs - post weighted:\n{models_outputs}")
+            logger.debug(f"type(models_outputs]): {type(models_outputs)}")
         
         # Sumamos los resultados ponderados de cada modelo
         # Para hacer las siguientes operaciones como se espera, tiene que ser un Tensor
@@ -72,8 +75,8 @@ class Ensemble(torch.nn.Module):
         # Votations
         votations = models_outputs[0]
         if self.is_main_device:
-            logger.info(f"type(votations):\n{type(votations)}")
-            logger.info(f"votations:\n{votations}")
+            logger.debug(f"type(votations):\n{type(votations)}")
+            logger.debug(f"votations:\n{votations}")
         for i in range(1, len(models_outputs)):
             votations += models_outputs[i]
             
@@ -83,9 +86,9 @@ class Ensemble(torch.nn.Module):
         # - hacer un max de la clase más votada si espera 0 en una 1 en el resto, o, si no, normalizarla.
 
         if self.is_main_device:
-            logger.info(f"type(votations):\n{type(votations)}")
-            logger.info(f"Pre-resultado.  Votations results:\n{votations}")        
-            #logger.info(f"max(votations):\n{max(votations)}")
+            logger.debug(f"type(votations):\n{type(votations)}")
+            logger.debug(f"Pre-resultado.  Votations results:\n{votations}")        
+            #logger.debug(f"max(votations):\n{max(votations)}")
 
         #Normalizamos los valores
         result = torch.empty(votations.size())
@@ -93,11 +96,15 @@ class Ensemble(torch.nn.Module):
             min_votations = float(min(votations[i]))
             max_votations = float(max(votations[i]))
             if self.is_main_device:
-                logger.info(f"min(votations[i]):\n{min_votations}")
-                logger.info(f"max(votations[i]):\n{max_votations}")
+                logger.debug(f"min(votations[i]):\n{min_votations}")
+                logger.debug(f"max(votations[i]):\n{max_votations}")
             #result[i] = (votations[i] - float(min(votations[i]))) / float((max(votations[i]) - min(votations[i])))
-            # Los valores deben estar en valores entre 0 y "num_classes"
-            result[i] = (self.num_classes - 1) * ((votations[i] - min_votations) / (max_votations - min_votations))
+            # TODO: revisar si los resultados tienen que estar entre 0 y 1 o entre 0 y num_clases-1
+            #result[i] = (self.num_classes - 1) * ((votations[i] - min_votations) / (max_votations - min_votations))
+            result[i] = (votations[i] - min_votations) / (max_votations - min_votations)
+        
+        if self.is_main_device:
+            logger.info(f"result - post-normalize: {result}")
 
         return result
     
