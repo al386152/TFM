@@ -84,7 +84,7 @@ time python3 ./main.py \
     --loss_function CrossEntropyLoss \
     --optimizer "SGD,Adam" \
     --votation_weights 1,0.8,0.7,0.5,0.6#1.2,0.4,0.9,0.1,0.2 \
-    --model_weights "..\Pesos\model_densenet169_5_outputs_2024-09-19.pth@..\Pesos\model_resnet50_5_outputs_2024-09-21.pth"
+    --model_weights "../Pesos/model_densenet169_5_outputs_2024-09-19.pth@../Pesos/model_resnet50_5_outputs_2024-09-21.pth"
 ```
 
 
