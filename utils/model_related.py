@@ -105,13 +105,13 @@ def fine_tuning(model, model_name, outputs, is_main_device):
     return model
 # -- Fin fine_tuning -- #
 
-def saving_the_model(args: dict, model):
-    # Esta función se tiene que ejecutar solo en un único hilo.
-
+def saving_the_model(args: dict, model: torch.nn.Module):
+    # POR S Esta función se tiene que ejecutar solo en un único hilo.
     model_name = OUTPUT_MODEL_NAME(name=args[cons.MODEL], number_clases=args[cons.NUMBER_CLASSES], 
                                    is_regression=args[cons.IS_REGRESSION])    
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
-    torch.save(model.state_dict(),  model_name)
+    torch.save(model.module.state_dict() if args[cons.IS_DISTRIBUTED] else model.state_dict(),
+               model_name)
 # -- Fin saving_the_model -- #
 
 
@@ -232,7 +232,8 @@ def load_model_weights(args: dict, model_name: str, model: torch.nn.Module, mode
             logger.info(f"{model_weights_path}\n ----")
             logger.debug(f"module.state_dict():\n{model.state_dict().keys()}")
 
-    state_dict = torch.load(model_weights_path, weights_only=args[cons.INFERENCE])
+    state_dict = torch.load(model_weights_path, weights_only=args[cons.INFERENCE], 
+                            map_location= None if "cuda" in args[cons.DEVICE] else torch.device('cpu'))
 
     if is_main_device:
         logger.debug(f"state_dict:\n{state_dict.keys()}")    
