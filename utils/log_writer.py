@@ -46,6 +46,7 @@ def getLogWritter(name, logging_level=cons.loggin_level,
 
     # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        #("WORLD_SIZE" in os.environ and (int(os.environ["WORLD_SIZE"]) == 1)) or \         
         # TODO: mirar si mover esto a alguna otra parte.
 
         log_path_with_date, log_name = prepare_log_file()
