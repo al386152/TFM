@@ -148,7 +148,7 @@ def check_and_set_votation_weights(args:dict):
             logger.error(texto)
         argparse.ArgumentError(None, texto)   
 
-    args[cons.ENSEMBLE_VOTATION_WEIGHTS] = {args[cons.MODEL][i] : list(map(float, votation_weights[i].split(cons.SEPARATOR_VOTATION_CLASS))) 
+    args[cons.ENSEMBLE_VOTATION_WEIGHTS] = {args[cons.MODEL][i] : Tensor(list(map(float, votation_weights[i].split(cons.SEPARATOR_VOTATION_CLASS)))) 
                                             for i in range(num_modelos)}
     print(f"args[{cons.ENSEMBLE_VOTATION_WEIGHTS}]: {args[cons.ENSEMBLE_VOTATION_WEIGHTS]}") # TODO: BORRAR
 # -- Fin check_votation_weights -- #

@@ -309,12 +309,14 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
     # Si hay más de un modelo en la lista, es un ensemble y hay que crearlo bien. 
     # -> Si no, es un modelo normal y hay que pasarlo como un modelo (y no como una lista de modelos)
     if len(model_names) > 1:
-        model = Ensemble(dict_models=dict_models, weight_votations=cons.ENSEMBLE_VOTATION_WEIGHTS, 
+        model = Ensemble(dict_models=dict_models, weight_votations=args[cons.ENSEMBLE_VOTATION_WEIGHTS], 
                  is_main_device=is_main_device)
-        if args[cons.IS_DISTRIBUTED]:
-            if is_main_device:
-                logger.info(f"DistributedDataParallel")
-            model = DistributedDataParallel(model, device_ids=[device])   
+        
+        # Esto falla porque "DistributedDataParallel is not needed when a module doesn't have any parameter that requires a gradient."
+        #if args[cons.IS_DISTRIBUTED]:
+        #    if is_main_device:
+        #        logger.info(f"DistributedDataParallel")
+        #    model = DistributedDataParallel(model, device_ids=[device])   
     else:
         model = dict_models.popitem()
 
