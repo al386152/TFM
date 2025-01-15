@@ -106,7 +106,7 @@ def fine_tuning(model, model_name, outputs, is_main_device):
 # -- Fin fine_tuning -- #
 
 def saving_the_model(args: dict, model: torch.nn.Module):
-    # POR S Esta función se tiene que ejecutar solo en un único hilo.
+    # Esta función se tiene que ejecutar solo en un único hilo.
     model_name = OUTPUT_MODEL_NAME(name=args[cons.MODEL], number_clases=args[cons.NUMBER_CLASSES], 
                                    is_regression=args[cons.IS_REGRESSION])    
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
