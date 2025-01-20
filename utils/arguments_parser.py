@@ -119,23 +119,50 @@ def get_args_parser():
                         help="Is a regression model instead of a classifier.")
 
     parser.add_argument(f"--{cons.REGRESSION_CLASS_BOUNDARIES}", type=str, default=f"0{cons.SEPARADOR_CLASS_BOUNDRIES}1{cons.SEPARADOR_CLASS_BOUNDRIES}2{cons.SEPARADOR_CLASS_BOUNDRIES}3{cons.SEPARADOR_CLASS_BOUNDRIES}4",
-                        help="The boundries to convert the regression outputs into classification-like values. The numbers must be separated by '{cons.SEPARADOR_CLASS_BOUNDRIES}' and must be greater than the previous one. The number of boundries must coincide with the number of classes.")
-
+                        help=f"The boundries to convert the regression outputs into classification-like values. The numbers must be separated by '{cons.SEPARADOR_CLASS_BOUNDRIES}' and must be greater than the previous one. The number of boundries must coincide with the number of classes.")
+    
+    parser.add_argument(f"--{cons.ENSEMBLE_TYPE_MODEL}", type=str, default=f"classifier",
+                        help=f"The ensemble models' types. It is a list of models separated by '{cons.SEPARATOR_ENSEMBLE_TYPE_MODEL}'. The number of model's type must coincide with the number of models. The model's types are: {cons.ENSEMBLE_MODEL_TYPES}")
+    # TODO: hacer el check and set de el de arriba.
     return parser
 # -- Fin get_args_parser -- #
 
+def check_and_set_type_models(args:dict):
+    
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"args[{cons.ENSEMBLE_TYPE_MODEL}]: {args[cons.ENSEMBLE_TYPE_MODEL]}")
+    
+    model_types = args[cons.ENSEMBLE_TYPE_MODEL].split(cons.SEPARATOR_ENSEMBLE_TYPE_MODEL)
+
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"model_types: {model_types}") #TODO: Convertirlo a debug
+    
+    num_modelos = len(args[cons.MODEL])
+
+    if len(args[cons.ENSEMBLE_TYPE_MODEL]) != num_modelos:
+        texto = f"El número de tipo de modelos ({len(args[cons.ENSEMBLE_TYPE_MODEL])}) no coincide con el número de modelos ({num_modelos})."
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.error(texto)
+
+    model_types = {args[cons.MODEL][i] : model_types[i] for i in range(num_modelos)}
+
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"model_types (diccionario): {model_types}") #TODO: Convertirlo a debug
+
+    args[cons.ENSEMBLE_TYPE_MODEL] = model_types
+# -- Fin check_and_set_type_models -- #
+
 def set_weights_paths(args:dict):
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-        logger.info(f"args[{cons.MODEL_WEIGHTS}]: {args[cons.MODEL_WEIGHTS]}") # TODO: Convertir en debug.
-        logger.info(f"cons.SEPARADOR_WEIGTHS_PATHS]: {cons.SEPARADOR_WEIGTHS_PATHS}") # TODO: Convertir en debug.
+        logger.debug(f"args[{cons.MODEL_WEIGHTS}]: {args[cons.MODEL_WEIGHTS]}")
 
     weights = args[cons.MODEL_WEIGHTS].split(cons.SEPARADOR_WEIGTHS_PATHS)
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-        logger.info(f"weights: {weights}") # TODO: Convertir en debug.
+        logger.debug(f"weights: {weights}")
 
     num_modelos = len(args[cons.MODEL])
     if len(weights) != num_modelos:
-        texto = f"El rutas a los pesos ({len(weights)}) no coincide con el número de modelos ({num_modelos})."
+        texto = f"El número de rutas a los pesos ({len(weights)}) no coincide con el número de modelos ({num_modelos})."
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.error(texto)
         argparse.ArgumentError(None, texto)
@@ -234,24 +261,53 @@ def check_and_set_optimizers(args:dict):
 # -- Fin check_and_set_optimizers -- #    
 
 def check_and_set_regression_boundaries(args:dict):
-        # Vamos a comprobar que los límites estén bien.
-    if args[cons.IS_REGRESSION]:
-        boundries = args[cons.REGRESSION_CLASS_BOUNDARIES].split(cons.SEPARADOR_CLASS_BOUNDRIES)
+    
+    #if args[cons.IS_REGRESSION]:
+        
+    list_regression_models = list(filter(lambda model: args[cons.ENSEMBLE_TYPE_MODEL][model] == cons.MODEL_TYPE_REGRESSION,
+                                args[cons.ENSEMBLE_TYPE_MODEL]))
 
-        num_boundries = len(boundries)
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"list_regression_models: {list_regression_models}") # TODO: Convertir en debug
+
+    number_models = len(list_regression_models)
+
+    set_boundries = args[cons.REGRESSION_CLASS_BOUNDARIES].split(cons.SEPARADOR_SPLIT_CLASS_BOUNDRIES)
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"set_boundries: {set_boundries}") # TODO: Convertir en debug
+
+    if len(set_boundries) < number_models:
+        texto = f"The number of set of boundries is not equal to the number of classes (|{len(boundries)}| != {number_models})."
+        if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.error(texto)
+        argparse.ArgumentError(None, texto)
+    
+    boundries = dict()
+    _boundries = set_boundries.split(cons.SEPARADOR_CLASS_BOUNDRIES) 
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"_boundries: {_boundries}") # TODO: Convertir en debug
+
+    # Vamos a comprobar que los límites estén bien.
+    for i in range(number_models):
+
+        rangos = _boundries[i]
+        num_boundries = len(rangos)
+        model = args[cons.MODEL][i]
 
         if num_boundries < args[cons.NUMBER_CLASSES]:
-            texto = f"The number of boundries is not equal to the number of classes (|{boundries}| != {args[cons.NUMBER_CLASSES]})."
+            texto = f"The number of boundries is not equal to the number of classes (|{rangos}| != {args[cons.NUMBER_CLASSES]})."
             logger.error(texto)
             argparse.ArgumentError(None, texto)
 
         for i in range(num_boundries-1):
-            if boundries[i] >= boundries[i+1]: 
-                texto = f"Every number must be greater than the previous one {boundries}."
+            if rangos[i] >= rangos[i+1]: 
+                texto = f"Every number must be greater than the previous one {rangos}."
                 logger.error(texto)
                 argparse.ArgumentError(None, texto)
-        
-        args[cons.REGRESSION_CLASS_BOUNDARIES] = Tensor(list(map(int, boundries)))
+
+        boundries[model] = Tensor(list(map(int, rangos)))
+    
+    args[cons.REGRESSION_CLASS_BOUNDARIES] = boundries
 # -- Fin check_and_set_regression_boundaries -- #
 
 def check_args(args:dict):    
@@ -262,6 +318,7 @@ def check_args(args:dict):
     check_and_set_transformations(args)
     check_and_set_split_percentages(args)
     set_list_no_augment_classes(args)
+    check_and_set_type_models(args)
     check_and_set_regression_boundaries(args)
     check_and_set_optimizers(args)
 # -- Fin check_args -- #

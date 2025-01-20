@@ -118,7 +118,6 @@ def saving_the_model(args: dict, model: torch.nn.Module):
 
 def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Tensor, num_classes:int, device):
 
-    #print(f"outputs - pre | type: {outputs.dtype} |\n{outputs}")
     # Se ponen los datos en la clase que les tocaría
     outputs = torch.bucketize(input=outputs, boundaries=boundaries)    
     outputs = outputs.to(torch.int)
@@ -261,8 +260,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
     model = None
     model_names = args[cons.MODEL]
     model_weights_path = args[cons.MODEL_WEIGHTS]
-    # TODO [IMPORTANTE]: Ver cómo cambiar eso para cargar a la vez modelos de clasificación y de regresión.
-    outputs = args[cons.NUMBER_CLASSES] if not args[cons.IS_REGRESSION] else 1
+    models_types = args[cons.ENSEMBLE_TYPE_MODEL]
 
     if is_main_device:
         logger.info(f"model_weights_path: {model_weights_path}")
@@ -273,6 +271,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
     dict_models = dict()
     for i in range(len(model_names)):
         model_name = model_names[i]
+        outputs = args[cons.NUMBER_CLASSES] if models_types[i] != cons.MODEL_TYPE_REGRESSION else 1
         if is_main_device:
             logger.info(f"Cargando el modelo: {model_name}")        
         

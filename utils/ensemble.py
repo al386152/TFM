@@ -2,8 +2,7 @@ import torch
 
 import utils.model_related as mr
 from .log_writer import getLogWritter
-
-from collections import OrderedDict
+from .constants import MODEL_TYPE_REGRESSION
 
 logger = getLogWritter(__name__)
 
@@ -17,8 +16,13 @@ class Ensemble(torch.nn.Module):
     #   -> valor: diccionario de clases tal que:
     #       -> la clave es el nombre/identificador de la clase
     #       -> el valor es el peso de la votación de ese modelo en esa clase
-    # def __init__(self, dict_models: dict[str, torch.nn.Module], weight_votations: dict[str, dict[int, float]] = None, is_main_device:bool=False, *args, **kwargs):
-    def __init__(self, dict_models:dict, device:torch.device, weight_votations:dict = None, is_main_device:bool = False, num_classes = 5, *args, **kwargs):
+    # 
+    #
+
+    def __init__(self, dict_models:dict, device:torch.device, types_models:dict, 
+                 regression_class_boundaries:dict, weight_votations:dict = None,
+                 is_main_device:bool = False, num_classes = 5, 
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         if is_main_device:
@@ -28,6 +32,8 @@ class Ensemble(torch.nn.Module):
         self.weight_votations = weight_votations
         self.num_classes = num_classes
         self.device = device
+        self.types_models = types_models
+        self.regression_class_boundaries = regression_class_boundaries
         #for _, model in self.dict_models:
         #    # capas_entrenar_final=  1: Se entrena al menos el clasificador. 0, no se entrena nada. -1 se entrena todo.
         #    mr.transfer_learning(model=model, capas_entrenar_final = 1, is_main_device=is_main_device)
@@ -40,21 +46,34 @@ class Ensemble(torch.nn.Module):
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         
+        # TODO: Ver como arreglar el caso de regresión y cómo tratar cuando hay un modelo de clasificación y uno de regresión.
+        #   Contexto: 
+        #       - En el caso de la regresión los resultados son un número real.
+        #       - En el caso de la regresión, se espera que los valores salgan como un número real para ser transformados.
+        #       - En el caso de la clasificación, los resultados son una lista de valores.
+        #       - ¿Solución?: 
+        #           1) Añadir como parámetro que sea una lista de si es clasificación o regresión
+        #           2) Hacer las trasformaciones de la salida aquí (esto es, de regresión a clasificación + pesos votación) y no hacerlas luego
+
+
         if self.is_main_device:
-            #logger.debug(f"x:\n{x}")
-            #logger.debug(f"self.dict_models:\n{self.dict_models}")
+            logger.debug(f"x:\n{x}")
             logger.debug(f"self.dict_models.keys():\n{self.dict_models.keys()}")
+
         models_outputs = list()
         for name_model in self.dict_models.keys():            
             model = self.dict_models[name_model]
-            #if self.is_main_device:
-            #    logger.debug(f"model:\n{model}")
-            #models_outputs.append(output * self.weight_votations[name_model] )
+
             output = model(x).to(self.device)
             if self.is_main_device:
-                #logger.debug(f"output:\n{models_outputs}")
-                logger.debug(f"type(output): {type(output)}")        
+                logger.info(f"self.types_models[{name_model}]:\n{self.types_models[name_model]}\nRegression: {self.types_models[name_model] == MODEL_TYPE_REGRESSION}") # TODO: Convertir en debugs
 
+            if self.types_models[name_model] == MODEL_TYPE_REGRESSION:
+                output = mr.from_regression_to_classification(outputs=output, boundaries=self.regression_class_boundaries, 
+                                                            num_classes=self.num_classes, device=self.device)
+            if self.is_main_device:
+                logger.info(f"output: {output}")
+                logger.debug(f"type(output): {type(output)}")        
                 logger.debug(f"self.weight_votations: {self.weight_votations}")
                 logger.debug(f"type(self.weight_votations): {type(self.weight_votations)}")
 
@@ -80,16 +99,10 @@ class Ensemble(torch.nn.Module):
             logger.debug(f"votations:\n{votations}")
         for i in range(1, len(models_outputs)):
             votations += models_outputs[i]
-            
-        # TODO: Revisar esta función 
-        # Faltaría: 
-        # - ver qué salida quiere en el caso de un clasificador y dársela.
-        # - hacer un max de la clase más votada si espera 0 en una 1 en el resto, o, si no, normalizarla.
 
         if self.is_main_device:
             logger.debug(f"type(votations):\n{type(votations)}")
             logger.debug(f"Pre-resultado.  Votations results:\n{votations}")        
-            #logger.debug(f"max(votations):\n{max(votations)}")
 
         #Normalizamos los valores
         result = torch.empty(votations.size()).to(self.device)
@@ -99,9 +112,6 @@ class Ensemble(torch.nn.Module):
             if self.is_main_device:
                 logger.debug(f"min(votations[i]):\n{min_votations}")
                 logger.debug(f"max(votations[i]):\n{max_votations}")
-            #result[i] = (votations[i] - float(min(votations[i]))) / float((max(votations[i]) - min(votations[i])))
-            # TODO: revisar si los resultados tienen que estar entre 0 y 1 o entre 0 y num_clases-1
-            #result[i] = (self.num_classes - 1) * ((votations[i] - min_votations) / (max_votations - min_votations))
             result[i] = (votations[i] - min_votations) / (max_votations - min_votations)
         
         if self.is_main_device:
