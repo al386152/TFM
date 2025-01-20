@@ -60,8 +60,9 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1, is_m
 # -- Fin transfer_learning -- #
 
 def get_classifier_layer(model: torch.nn.Module, model_name: str, is_main_device: bool=False)->torch.nn.modules.linear.Linear:
-    #if model_name == "vgg19":
-    print(f"model_name: {model_name}")
+    #print(f"model_name: {model_name}")
+    if is_main_device: 
+            logger.info(f"model_name: {model_name}")
     if "vgg" in model_name:
         classifier_layer = model.classifier[6]        
     #elif model_name == "resnet50":
@@ -229,12 +230,14 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
 
 def load_model_weights(args: dict, model_name: str, model: torch.nn.Module, device:torch.device,  model_weights_path:str, is_main_device:bool):
     if is_main_device:
-            logger.info(f"{model_weights_path}\n ----")
+            logger.info(f"----load_model_weights----")
+            logger.info(f"model_weights_path: {model_weights_path}\n ----")
+            logger.info(f"device: {device}\n ----")
+            logger.info(f"type(device): {type(device)}")
             logger.debug(f"module.state_dict():\n{model.state_dict().keys()}")
 
-    state_dict = torch.load(model_weights_path, weights_only=args[cons.INFERENCE], 
-                            map_location=device)
-
+    state_dict = torch.load(f=model_weights_path, weights_only=args[cons.INFERENCE])#,
+                            #map_location=device)
     if is_main_device:
         logger.debug(f"state_dict:\n{state_dict.keys()}")    
 
@@ -298,11 +301,12 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
         if args[cons.IS_DISTRIBUTED]:
             if is_main_device:
                 logger.info(f"DistributedDataParallel")
-            model = DistributedDataParallel(model, device_ids=[device])   
+            model = DistributedDataParallel(model, device_ids=[device])
         
         if model_weights_path:
-            load_model_weights(args=args, model_name=model_name, model=model, device=device,
-                        model_weights_path=model_weights_path[i], is_main_device=is_main_device)
+            load_model_weights(args=args, model_name=model_name, model=model, 
+                               device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
+                               model_weights_path=model_weights_path[i], is_main_device=is_main_device)
             
         model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
         dict_models[model_name] = model
