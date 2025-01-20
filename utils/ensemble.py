@@ -18,7 +18,7 @@ class Ensemble(torch.nn.Module):
     #       -> la clave es el nombre/identificador de la clase
     #       -> el valor es el peso de la votación de ese modelo en esa clase
     # def __init__(self, dict_models: dict[str, torch.nn.Module], weight_votations: dict[str, dict[int, float]] = None, is_main_device:bool=False, *args, **kwargs):
-    def __init__(self, dict_models:dict, weight_votations:dict = None, is_main_device:bool = False, num_classes = 5, *args, **kwargs):
+    def __init__(self, dict_models:dict, device:torch.device, weight_votations:dict = None, is_main_device:bool = False, num_classes = 5, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         if is_main_device:
@@ -27,6 +27,7 @@ class Ensemble(torch.nn.Module):
         self.dict_models = dict_models
         self.weight_votations = weight_votations
         self.num_classes = num_classes
+        self.device = device
         #for _, model in self.dict_models:
         #    # capas_entrenar_final=  1: Se entrena al menos el clasificador. 0, no se entrena nada. -1 se entrena todo.
         #    mr.transfer_learning(model=model, capas_entrenar_final = 1, is_main_device=is_main_device)
@@ -49,7 +50,7 @@ class Ensemble(torch.nn.Module):
             #if self.is_main_device:
             #    logger.debug(f"model:\n{model}")
             #models_outputs.append(output * self.weight_votations[name_model] )
-            output = model(x)
+            output = model(x).to(self.device)
             if self.is_main_device:
                 #logger.debug(f"output:\n{models_outputs}")
                 logger.debug(f"type(output): {type(output)}")        
@@ -60,7 +61,7 @@ class Ensemble(torch.nn.Module):
             if self.is_main_device:
                 logger.info(f"output: {output}") # TODO: Borrar
 
-            output *= self.weight_votations[name_model]
+            output *= self.weight_votations[name_model].to(self.device)
             if self.is_main_device:
                 logger.debug(f"output - tras producto:\n{output}")
             models_outputs.append(output)
@@ -73,7 +74,7 @@ class Ensemble(torch.nn.Module):
         # Para hacer las siguientes operaciones como se espera, tiene que ser un Tensor
         #models_outputs = torch.Tensor(models_outputs)
         # Votations
-        votations = models_outputs[0]
+        votations = models_outputs[0].to(self.device)
         if self.is_main_device:
             logger.debug(f"type(votations):\n{type(votations)}")
             logger.debug(f"votations:\n{votations}")
@@ -91,7 +92,7 @@ class Ensemble(torch.nn.Module):
             #logger.debug(f"max(votations):\n{max(votations)}")
 
         #Normalizamos los valores
-        result = torch.empty(votations.size())
+        result = torch.empty(votations.size()).to(self.device)
         for i in range(len(votations)):
             min_votations = float(min(votations[i]))
             max_votations = float(max(votations[i]))
