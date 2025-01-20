@@ -261,6 +261,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
     model = None
     model_names = args[cons.MODEL]
     model_weights_path = args[cons.MODEL_WEIGHTS]
+    # TODO [IMPORTANTE]: Ver cómo cambiar eso para cargar a la vez modelos de clasificación y de regresión.
     outputs = args[cons.NUMBER_CLASSES] if not args[cons.IS_REGRESSION] else 1
 
     if is_main_device:
@@ -297,13 +298,31 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
             logger.debug(f"model.to(device)")
         model = model.to(device)
 
+        # TODO: ¡HACER ESTO BIEN!
+        # Contexto: Se pueden cargar pesos de un modelo o de "DistributedDataParallel". Ambos son iguales, pero se modifican las claves del diccionario de pesos ==> no va bien        
+        try:
+            if is_main_device:
+                logger.info("Tratando de cargar los pesos en el modelo base")
+            if model_weights_path:
+                load_model_weights(args=args, model_name=model_name, model=model, 
+                                device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
+                                model_weights_path=model_weights_path[i], is_main_device=is_main_device)
+            pesos_por_cargar = False
+            if is_main_device:
+                logger.info("Pesos cargados en el modelo base")
+        except:
+            if is_main_device:
+                logger.info("Los pesos no se han cargado en el modelo base ==> se intentarán cargar como DistributedDataParallel")
+            pesos_por_cargar = True
+        
+
         # TODO: ¡¡REVISAR ESTO!!
         if args[cons.IS_DISTRIBUTED]:
             if is_main_device:
                 logger.info(f"DistributedDataParallel")
             model = DistributedDataParallel(model, device_ids=[device])
         
-        if model_weights_path:
+        if model_weights_path and pesos_por_cargar:
             load_model_weights(args=args, model_name=model_name, model=model, 
                                device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
                                model_weights_path=model_weights_path[i], is_main_device=is_main_device)
