@@ -38,6 +38,7 @@ IS_REGRESSION = "regression"
 REGRESSION_CLASS_BOUNDARIES = "class_boundries"
 ENSEMBLE_VOTATION_WEIGHTS = "votation_weights"
 ENSEMBLE_TYPE_MODEL = "type_models"
+ENSEMBLE_CREATE_CLASSIFIER = "create_ensemble_classifier"
 
 TEST_DATA_PATH = "test_path"
 TRAIN_DATA_PATH = "train_path"

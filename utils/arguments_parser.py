@@ -123,6 +123,10 @@ def get_args_parser():
     
     parser.add_argument(f"--{cons.ENSEMBLE_TYPE_MODEL}", type=str, default=f"classifier",
                         help=f"The ensemble models' types. It is a list of models separated by '{cons.SEPARATOR_ENSEMBLE_TYPE_MODEL}'. The number of model's type must coincide with the number of models. The model's types are: {cons.ENSEMBLE_MODEL_TYPES}")
+    
+    parser.add_argument(f"--{cons.ENSEMBLE_CREATE_CLASSIFIER}", action='store_true', default=False,
+                    help="Create a classifier layer instead of using votation weights for ensemble models")
+
     return parser
 # -- Fin get_args_parser -- #
 

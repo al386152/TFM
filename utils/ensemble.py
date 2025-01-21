@@ -19,7 +19,8 @@ class Ensemble(torch.nn.Module):
     #       -> el valor es el peso de la votación de ese modelo en esa clase
     def __init__(self, list_models:list, device:torch.device, types_models:dict, 
                  regression_class_boundaries:dict, weight_votations:dict = None,
-                 is_main_device:bool = False, num_classes = 5, 
+                 is_main_device:bool = False, num_classes:int = 5, freeze_models_weights:bool = False,
+                 create_classifier:bool = False,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         
@@ -31,9 +32,21 @@ class Ensemble(torch.nn.Module):
         self.num_classes = num_classes
         self.device = device
         self.types_models = types_models
-        self.regression_class_boundaries = regression_class_boundaries
+        self.regression_class_boundaries = regression_class_boundaries        
 
         self.list_model_names = [nombre for nombre,_ in list_models]
+
+        if freeze_models_weights:
+            for model in self.list_models:
+                for param in model.parameters():
+                    param.requires_grad = False
+
+        if create_classifier:
+            # Van a haber tantas entradas como el número de clases (salidas del clasificador de cada modelo) por cada modelo.
+            self.classifier = torch.nn.Linear(num_classes * len(self.list_models), num_classes)
+        else:
+            self.classifier = None
+        
 
         if self.is_main_device:            
             logger.info(f"Ensemble created with the following models:\n{[(self.list_model_names[i], self.types_models[i]) for i in range(len(self.types_models))]}")
@@ -45,10 +58,13 @@ class Ensemble(torch.nn.Module):
         return f"{super().__str__()} - {str([(self.list_model_names[i], self.types_models[i]) for i in range(len(self.types_models))])}"
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:   
+        
+        x = x.clone() # Por si acaso se modifica la entrada original
 
         if self.is_main_device:
             logger.debug(f"self.list_models:\n{self.list_models}")
 
+        # Obtenemos las salidas de todos los modelos
         models_outputs = list()
         for i in range(len(self.list_models)):
 
@@ -58,41 +74,49 @@ class Ensemble(torch.nn.Module):
             if self.is_main_device:
                 logger.debug(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}")
 
+            # Transformando la salido para que tenga el formato de una de clasificación
             if self.types_models[i] == MODEL_TYPE_REGRESSION:
                 if self.is_main_device:
                     logger.debug(f"self.regression_class_boundaries[{i}] {self.regression_class_boundaries[i]}")
 
                 output = mr.from_regression_to_classification(outputs=output, boundaries=self.regression_class_boundaries[i].to(self.device), 
                                                               num_classes=self.num_classes, device=self.device)
+            #else: output = output # La salida ya está en el formato de una de clasificación.
+
             if self.is_main_device:
                 logger.debug(f"output: {output}\ntype(output): {type(output)}\nself.weight_votations: {self.weight_votations}\ntype(self.weight_votations): {type(self.weight_votations)}")                                                
 
-            output *= self.weight_votations[i].to(self.device)
-            if self.is_main_device:
-                logger.debug(f"output - tras producto:\n{output}")
+            if self.classifier is not None:            
+                # Se pondera la salida en función de los pesos y se añade a la lista desde la cual se van a acumular todos.
+                output *= self.weight_votations[i].to(self.device)
+                if self.is_main_device:
+                    logger.debug(f"output - tras producto:\n{output}")
+            #else: No se modifican las salidas, el plan es que lo haga el clasificador.
             models_outputs.append(output)
 
         if self.is_main_device:
             logger.debug(f"Models outputs - post weighted:\n{models_outputs}\ntype(models_outputs]): {type(models_outputs)}")
         
-        # Sumamos los resultados ponderados de cada modelo
-        # Para hacer las siguientes operaciones como se espera, tiene que ser un Tensor
+        if self.classifier is not None:
+            # Acumulamos las votaciones de cada modelo y los normalizamos
+            votations = sum(models_outputs).to(self.device)
 
-        # Votations
-        votations = models_outputs[0].to(self.device)
-        if self.is_main_device:
-            logger.debug(f"type(votations):\n{type(votations)}\nvotations:\n{votations}")
-        for i in range(1, len(models_outputs)):
-            votations += models_outputs[i]
+            if self.is_main_device:
+                logger.debug(f"type(votations):\n{type(votations)}\nPre-normalizado.  Votations results:\n{votations}")
 
-        if self.is_main_device:
-            logger.debug(f"type(votations):\n{type(votations)}\nPre-resultado.  Votations results:\n{votations}")
+            #Normalizamos los valores        
+            normalize_tensor(data=votations, output=(result:=torch.empty(votations.size()).to(self.device)) )
+            
+            if self.is_main_device:
+                logger.debug(f"result - post-normalize: {result}")
+        else:
+            models_outputs = torch.stack(models_outputs).to(self.device)
+            if self.is_main_device:                
+                logger.info(f"torch.stack(models_outputs): {models_outputs}") # TODO: convertir en debug
 
-        #Normalizamos los valores        
-        normalize_tensor(data=votations, output=(result:=torch.empty(votations.size()).to(self.device)) )
-        
-        if self.is_main_device:
-            logger.debug(f"result - post-normalize: {result}")
+            result = self.classifier(models_outputs)
+
+            if self.is_main_device:                
+                logger.info(f"result: {result}") # TODO: convertir en debug
 
         return result
-
