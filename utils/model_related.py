@@ -268,9 +268,16 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
     if is_main_device:
         logger.info(f"Cargando los siguientes pesos: \'{cons.DEFAULT_MODEL_WEIGHTS if model_weights_path is None else model_weights_path}\'")
 
-    dict_models = dict()
+    if is_main_device:
+        logger.info(f"models_types: \'{models_types}\'") # TODO: Convertirlo en debug
+
+    list_models = list()
     for i in range(len(model_names)):
         model_name = model_names[i]
+        
+        if is_main_device:
+            logger.info(f"models_types[{i}]: \'{models_types[i]}\'") # TODO: Convertirlo en debug
+
         outputs = args[cons.NUMBER_CLASSES] if models_types[i] != cons.MODEL_TYPE_REGRESSION else 1
         if is_main_device:
             logger.info(f"Cargando el modelo: {model_name}")        
@@ -327,14 +334,16 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
                                model_weights_path=model_weights_path[i], is_main_device=is_main_device)
             
         model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
-        dict_models[model_name] = model
+        list_models.append((model_name, model))
 
     # TODO: Comprobar de que vaya correctamente
     # Si hay más de un modelo en la lista, es un ensemble y hay que crearlo bien. 
     # -> Si no, es un modelo normal y hay que pasarlo como un modelo (y no como una lista de modelos)
     if len(model_names) > 1:        
-        model = Ensemble(dict_models=dict_models, weight_votations=args[cons.ENSEMBLE_VOTATION_WEIGHTS],
-                 is_main_device=is_main_device, device=device)
+        model = Ensemble(list_models=list_models, weight_votations=args[cons.ENSEMBLE_VOTATION_WEIGHTS],
+                         types_models=args[cons.ENSEMBLE_TYPE_MODEL], 
+                         regression_class_boundaries= args[cons.REGRESSION_CLASS_BOUNDARIES],
+                         is_main_device=is_main_device, device=device)
         
         # Esto falla porque "DistributedDataParallel is not needed when a module doesn't have any parameter that requires a gradient."
         #if args[cons.IS_DISTRIBUTED]:
@@ -342,7 +351,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
         #        logger.info(f"DistributedDataParallel")
         #    model = DistributedDataParallel(model, device_ids=[device])   
     else:
-        model = dict_models.popitem()
+        _, model = list_models[0]
 
     return model
 # -- Fin load_model -- #

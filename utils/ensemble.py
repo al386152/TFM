@@ -8,9 +8,10 @@ logger = getLogWritter(__name__)
 
 class Ensemble(torch.nn.Module):
 
-    # dict_models: 
-    #   -> clave: nombre del modelo
-    #   -> valor: el modelo
+    # --dict_models--
+    # --list_models--:
+    #   ->Tupla: (nombre del modelo, el modelo)
+    # 
     # weight_votations: clave: 
     #   -> clave: nombre del modelo
     #   -> valor: diccionario de clases tal que:
@@ -19,8 +20,8 @@ class Ensemble(torch.nn.Module):
     # 
     #
 
-    def __init__(self, dict_models:dict, device:torch.device, types_models:dict, 
-                 regression_class_boundaries:dict, weight_votations:dict = None,
+    def __init__(self, list_models:list, device:torch.device, types_models:dict, 
+                 regression_class_boundaries:list, weight_votations:dict = None,
                  is_main_device:bool = False, num_classes = 5, 
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,21 +29,23 @@ class Ensemble(torch.nn.Module):
         if is_main_device:
             logger.info("Creating ensemble")
         self.is_main_device = is_main_device
-        self.dict_models = dict_models
+        self.list_models = list_models        
         self.weight_votations = weight_votations
         self.num_classes = num_classes
         self.device = device
         self.types_models = types_models
         self.regression_class_boundaries = regression_class_boundaries
+
+        self.list_model_names = [nombre for nombre,_ in list_models]
         #for _, model in self.dict_models:
         #    # capas_entrenar_final=  1: Se entrena al menos el clasificador. 0, no se entrena nada. -1 se entrena todo.
         #    mr.transfer_learning(model=model, capas_entrenar_final = 1, is_main_device=is_main_device)
 
         if self.is_main_device:
-            logger.info(f"Ensemble created with the following models:\n{dict_models.keys()}")
+            logger.info(f"Ensemble created with the following models:\n{self.list_model_names}")
 
     def get_list_models(self):
-        return list(self.dict_models.values())
+        return self.list_model_names
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         
@@ -57,20 +60,24 @@ class Ensemble(torch.nn.Module):
 
 
         if self.is_main_device:
-            logger.debug(f"x:\n{x}")
-            logger.debug(f"self.dict_models.keys():\n{self.dict_models.keys()}")
+            #logger.debug(f"x:\n{x}")
+            logger.info(f"self.list_models:\n{self.list_models}")
 
         models_outputs = list()
-        for name_model in self.dict_models.keys():            
-            model = self.dict_models[name_model]
+        #models_names = self.dict_models.keys()
+        for i in range(len(self.list_models)):
+
+            name_model, model = self.list_models[i]
 
             output = model(x).to(self.device)
             if self.is_main_device:
-                logger.info(f"self.types_models[{name_model}]:\n{self.types_models[name_model]}\nRegression: {self.types_models[name_model] == MODEL_TYPE_REGRESSION}") # TODO: Convertir en debugs
+                logger.info(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}") # TODO: Convertir en debugs
+                logger.info(f"self.regression_class_boundaries[{i}] {self.regression_class_boundaries[i]}") # TODO: Convertir en debugs
 
-            if self.types_models[name_model] == MODEL_TYPE_REGRESSION:
-                output = mr.from_regression_to_classification(outputs=output, boundaries=self.regression_class_boundaries, 
-                                                            num_classes=self.num_classes, device=self.device)
+            if self.types_models[i] == MODEL_TYPE_REGRESSION:
+                # TODO: regression_class_boundaries no debería ser un diccionario (hay que cambiarlo, y deberíamos pasar la lista, no la lista de listas)
+                output = mr.from_regression_to_classification(outputs=output, boundaries=self.regression_class_boundaries[i].to(self.device), 
+                                                              num_classes=self.num_classes, device=self.device)
             if self.is_main_device:
                 logger.info(f"output: {output}")
                 logger.debug(f"type(output): {type(output)}")        
@@ -80,7 +87,8 @@ class Ensemble(torch.nn.Module):
             if self.is_main_device:
                 logger.info(f"output: {output}") # TODO: Borrar
 
-            output *= self.weight_votations[name_model].to(self.device)
+            # TODO: weight_votations no debería ser un diccionario (hay que cambiarlo, y deberíamos pasar la lista
+            output *= self.weight_votations[i].to(self.device)
             if self.is_main_device:
                 logger.debug(f"output - tras producto:\n{output}")
             models_outputs.append(output)
@@ -91,7 +99,7 @@ class Ensemble(torch.nn.Module):
         
         # Sumamos los resultados ponderados de cada modelo
         # Para hacer las siguientes operaciones como se espera, tiene que ser un Tensor
-        #models_outputs = torch.Tensor(models_outputs)
+
         # Votations
         votations = models_outputs[0].to(self.device)
         if self.is_main_device:
