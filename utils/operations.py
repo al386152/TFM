@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from torch import distributed, cuda
 import torch.distributed
 import torch.utils
-from collections import Counter
 
 import utils.constants as cons
 
@@ -102,7 +101,6 @@ def setup_gpu(args:dict, logger):
     return device, worldsize
 # -- Fin setup_gpu -- #
 
-
 def GET_IMAGES_FOLDER_PATH():
     return os.path.join(cons.IMAGES_FOLDER_NAME, GET_FECHA_INICIO_EJECUCION_CON_FORMATO())
 # -- Fin GET_IMAGES_FOLDER_PATH -- #
@@ -134,3 +132,9 @@ def get_proporcion_datasets(datasets:dict) -> dict:
     num_folders = len(cons.LIST_FOLDER_NAMES)
     return {elem: proporcion[elem]/num_folders for elem in proporcion}
 # -- Fin get_proporcion_datasets -- #
+
+def normalize_tensor(data:torch.Tensor, output:torch.Tensor=None) -> None:
+    for i in range(len(data)):
+        min_votations = float(min(data[i]))
+        max_votations = float(max(data[i]))
+        output[i] = (data[i] - min_votations) / (max_votations - min_votations)

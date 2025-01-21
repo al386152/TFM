@@ -121,25 +121,18 @@ def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Ten
     # Se ponen los datos en la clase que les tocaría
     outputs = torch.bucketize(input=outputs, boundaries=boundaries)    
     outputs = outputs.to(torch.int)
-    # Al parecer, hay algún caso en el que se pasa a una clase inexistente
-    # apply_ solo se puede hacer en tensores en la CPU :)
-    #outputs.apply_(lambda x: (x if x < num_classes else num_classes-1) )
-    #print(f"outputs - post | type: {outputs.dtype} |\n{outputs}")
 
     # Se preparan los datos en el formato esperado para las métricas.
     addapted_output = list()
 
-    #print(f"ouput[0]: {ouput[0]}")
     for ouput in outputs:        
         mod_ouput = [0] * num_classes
-        # Al parecer, hay algún caso en el que se pasa a una clase inexistente, como explico arriba.
+        # Al parecer, hay algún caso en el que se pasa a una clase inexistente
         clase = ouput[0] if ouput[0] < num_classes else num_classes - 1
         mod_ouput[clase] = 1
         addapted_output.append(mod_ouput)
 
-    #return torch.Tensor(addapted_output)
-    addapted_output = torch.Tensor(addapted_output)#.to(torch.int)
-    #print(f"addapted_output | type: {addapted_output.dtype} | size: {addapted_output.size()} |\n{addapted_output}")    
+    addapted_output = torch.Tensor(addapted_output)
 
     return addapted_output.to(device)
 
@@ -162,11 +155,6 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
             if is_main_device and (i % log_info_cada == 0):
                 info_print = f"{nombre_prueba} - Batch: [{i + 1}/{num_elementos}]"
                 logger.info(info_print)
-
-            #if args[cons.IS_REGRESSION]:
-            #    #labels = labels.float()
-            #    labels = torch.squeeze(labels)
-            #    #labels = labels.to(torch.int)
 
             inputs, labels = inputs.to(device), labels.to(device)
 
@@ -216,7 +204,6 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
         if args[cons.IS_REGRESSION]:
             dict_resultados_regresion = m.get_metrics(metricas_regression, args=args, save_confusion_matrix=save_confusion_matrix, 
                                                         is_main_device=is_main_device)        
-            #print(f"dict_resultados_regresion: {dict_resultados_regresion}")
             for name in dict_resultados_regresion:
                 logger.info(f"{name}:\n{dict_resultados[name]}")
         
@@ -230,9 +217,9 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
 def load_model_weights(args: dict, model_name: str, model: torch.nn.Module, device:torch.device,  model_weights_path:str, is_main_device:bool):
     if is_main_device:
             logger.info(f"----load_model_weights----")
-            logger.info(f"model_weights_path: {model_weights_path}\n ----")
-            logger.info(f"device: {device}\n ----")
-            logger.info(f"type(device): {type(device)}")
+            logger.debug(f"model_weights_path: {model_weights_path}\n ----")
+            logger.debug(f"device: {device}\n ----")
+            logger.debug(f"type(device): {type(device)}")
             logger.debug(f"module.state_dict():\n{model.state_dict().keys()}")
 
     state_dict = torch.load(f=model_weights_path, weights_only=args[cons.INFERENCE])#,
@@ -240,19 +227,7 @@ def load_model_weights(args: dict, model_name: str, model: torch.nn.Module, devi
     if is_main_device:
         logger.debug(f"state_dict:\n{state_dict.keys()}")    
 
-    # Al menos con ResNet, esto es necesario
-    # Básicamente, no me guarda los pesos del clasificador bien, solo guarda la de la última capa ya que, entiendo, las otras 3 no son necesarias ==> tengo que poner a mano las cosas.
-    if "resnet50" == model_name:
-        if is_main_device:
-            logger.debug('if "resnet50" in model_name:')
-    
-    elif "densenet169" == model_name:
-        if is_main_device:
-            logger.debug('if "densenet169" in model_name:')
-
-    model.load_state_dict(state_dict, strict=True )
-    if is_main_device and "resnet50" == model_name:
-        logger.info(f"module.fc: {model.module.fc}")
+    model.load_state_dict(state_dict, strict=True)
 # -- Fin load_model_weights -- #
 
 def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True) -> torch.nn.Module:
@@ -289,9 +264,6 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
 
         if is_main_device:
             logger.debug(f"Modelo cargado: {model}")             
-        
-        #model = model.to(device)
-        #if args[cons.IS_DISTRIBUTED]: model = DistributedDataParallel(model, device_ids=[device])
 
         if fine__tuning: 
             model = fine_tuning(model=model, model_name=model_name, outputs=outputs, is_main_device=is_main_device)     
@@ -304,8 +276,9 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
             logger.debug(f"model.to(device)")
         model = model.to(device)
 
-        # TODO: ¡HACER ESTO BIEN!
-        # Contexto: Se pueden cargar pesos de un modelo o de "DistributedDataParallel". Ambos son iguales, pero se modifican las claves del diccionario de pesos ==> no va bien        
+        #Se pueden cargar pesos de un modelo o de "DistributedDataParallel". 
+        # Ambos son iguales, pero se modifican las claves del diccionario de pesos, 
+        # Entonces, si no puede cargarlos como el propio modelo, lo intenta como DistributedDataParallel
         try:
             if is_main_device:
                 logger.info("Tratando de cargar los pesos en el modelo base")
@@ -321,8 +294,6 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
                 logger.info("Los pesos no se han cargado en el modelo base ==> se intentarán cargar como DistributedDataParallel")
             pesos_por_cargar = True
         
-
-        # TODO: ¡¡REVISAR ESTO!!
         if args[cons.IS_DISTRIBUTED]:
             if is_main_device:
                 logger.info(f"DistributedDataParallel")
@@ -336,20 +307,11 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
         model = transfer_learning(model, args[cons.NOT_FREEZE_LAYERS], is_main_device)
         list_models.append((model_name, model))
 
-    # TODO: Comprobar de que vaya correctamente
-    # Si hay más de un modelo en la lista, es un ensemble y hay que crearlo bien. 
-    # -> Si no, es un modelo normal y hay que pasarlo como un modelo (y no como una lista de modelos)
     if len(model_names) > 1:        
         model = Ensemble(list_models=list_models, weight_votations=args[cons.ENSEMBLE_VOTATION_WEIGHTS],
                          types_models=args[cons.ENSEMBLE_TYPE_MODEL], 
                          regression_class_boundaries= args[cons.REGRESSION_CLASS_BOUNDARIES],
                          is_main_device=is_main_device, device=device)
-        
-        # Esto falla porque "DistributedDataParallel is not needed when a module doesn't have any parameter that requires a gradient."
-        #if args[cons.IS_DISTRIBUTED]:
-        #    if is_main_device:
-        #        logger.info(f"DistributedDataParallel")
-        #    model = DistributedDataParallel(model, device_ids=[device])   
     else:
         _, model = list_models[0]
 

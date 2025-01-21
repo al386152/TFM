@@ -2,7 +2,6 @@ import os
 import sys
 import logging
 
-from datetime import datetime
 from typing import List
 
 from utils.operations import GET_FECHA_INICIO_EJECUCION
@@ -42,12 +41,11 @@ def add_file_handler(loggers: List[logging.Logger]):
 def getLogWritter(name, logging_level=cons.loggin_level, 
                 copiar_a_stdout = True, logger = None)->logging.Logger:   
 
-    # Realmente, solo el proceso 0 hace los logs 
+    # Solo el proceso 0 hace los logs (si no, saldría la información repetida)
 
     # ("LOCAL_RANK" not in os.environ) es true si se trabaja sin concurrencia
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         #("WORLD_SIZE" in os.environ and (int(os.environ["WORLD_SIZE"]) == 1)) or \         
-        # TODO: mirar si mover esto a alguna otra parte.
 
         log_path_with_date, log_name = prepare_log_file()
 

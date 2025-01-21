@@ -24,13 +24,17 @@ num_epochs=1
 name_dataset="IDRiD"
 #name_dataset="Eyepacs_Aptos_Messidor"
 batch_size=48 #64
-num_graficas=1
+num_graficas=4
 models="densenet169,densenet169,resnet50"
 type_models="classifier,regression,regression"
-rutas_pesos="./pesos/regresion/regression_model_densenet169_MAE_0.8,1.8,2.3,3.3,4.pth@./pesos/regresion/regression_model_densenet169_MAE_0,1,2,3,4.pth@./pesos/regresion/regression_model_resnet50_MSE_0.3,1.3,2.3,3.3,4.pth"
+#rutas_pesos="./pesos/regresion/regression_model_densenet169_MAE_0.8,1.8,2.3,3.3,4.pth@./pesos/regresion/regression_model_densenet169_MAE_0,1,2,3,4.pth@./pesos/regresion/regression_model_resnet50_MSE_0.3,1.3,2.3,3.3,4.pth"
+rutas_pesos="./pesos/clasificacion/model_densenet169_5_outputs_2024-09-19.pth@./pesos/regresion/regression_model_densenet169_MAE_0,1,2,3,4.pth@./pesos/regresion/regression_model_resnet50_MSE_0.3,1.3,2.3,3.3,4.pth"
 optimizer="SGD,SGD,Adam"
-votation_weights="0.96,0.66,0.4,0.57,0.61#0.94,0.62,0.57,0.5,0.54#0.61,0.59,0.46,0.64,0.54"
-class_boundries="0.8,1.8,2.3,3.3,4#0,1,2,3,4#0.3,1.3,2.3,3.3,4"
+#votation_weights="0.96,0.66,0.4,0.57,0.61#0.94,0.62,0.57,0.5,0.54#0.61,0.59,0.46,0.64,0.54"
+votation_weights="0.9822,0.7,0.5,0.7,0.8#0.94,0.85,0.6,0.7,0.7#0.75,0.75,0.6,0.8,0.6"
+#votation_weights="1,1,1,1,1#1,1,1,1,1#1,1,1,1,1"
+#class_boundries="0.8,1.8,2.3,3.3,4#0,1,2,3,4#0.3,1.3,2.3,3.3,4"
+class_boundries="0,1,2,3,4#0.3,1.3,2.3,3.3,4"
 
 echo "num_epochs: $num_epochs"
 #echo "layers_unfreeze: $layers_unfreeze"

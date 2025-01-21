@@ -72,11 +72,6 @@ def main(args: dict):
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
     metricas_regresion = get_regression_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
-    #if is_main_device:
-    #    print(f"Main device: {device}")
-    #else:
-    #    print(f"Not main device: {device}")
-
     if not args[cons.INFERENCE]:
         # Si no es inferencia, es entrenamiento.
         if is_main_device:

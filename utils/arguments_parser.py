@@ -123,7 +123,6 @@ def get_args_parser():
     
     parser.add_argument(f"--{cons.ENSEMBLE_TYPE_MODEL}", type=str, default=f"classifier",
                         help=f"The ensemble models' types. It is a list of models separated by '{cons.SEPARATOR_ENSEMBLE_TYPE_MODEL}'. The number of model's type must coincide with the number of models. The model's types are: {cons.ENSEMBLE_MODEL_TYPES}")
-    # TODO: hacer el check and set de el de arriba.
     return parser
 # -- Fin get_args_parser -- #
 
@@ -194,8 +193,6 @@ def check_and_set_votation_weights(args:dict):
             logger.error(texto)
         argparse.ArgumentError(None, texto)   
 
-    #args[cons.ENSEMBLE_VOTATION_WEIGHTS] = {args[cons.MODEL][i] : Tensor(list(map(float, votation_weights[i].split(cons.SEPARATOR_VOTATION_CLASS)))) 
-    #                                        for i in range(num_modelos)}
     args[cons.ENSEMBLE_VOTATION_WEIGHTS] = [Tensor(list(map(float, votation_weights[i].split(cons.SEPARATOR_VOTATION_CLASS)))) 
                                             for i in range(num_modelos)]
 # -- Fin check_and_set_votation_weights -- #
@@ -259,13 +256,10 @@ def check_and_set_optimizers(args:dict):
                 logger.error(texto)
             argparse.ArgumentError(None, texto)
     args[cons.OPTIMIZER] = list_optims
-
 # -- Fin check_and_set_optimizers -- #    
 
 def check_and_set_regression_boundaries(args:dict):
     
-    #if args[cons.IS_REGRESSION]:
-
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.debug(f"args[cons.ENSEMBLE_TYPE_MODEL]: {args[cons.ENSEMBLE_TYPE_MODEL]}")
 
@@ -273,15 +267,15 @@ def check_and_set_regression_boundaries(args:dict):
                                 enumerate(args[cons.ENSEMBLE_TYPE_MODEL])))
 
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-        logger.info(f"list_regression_models: {list_regression_models}")
+        logger.debug(f"list_regression_models: {list_regression_models}")
 
     number_models = len(list_regression_models)
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-        logger.info(f"number_models: {number_models}| range(number_models): {range(number_models)}")
+        logger.debug(f"number_models: {number_models}| range(number_models): {range(number_models)}")
 
     set_boundries = args[cons.REGRESSION_CLASS_BOUNDARIES].split(cons.SEPARADOR_SPLIT_CLASS_BOUNDRIES)
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-        logger.info(f"set_boundries: {set_boundries}")
+        logger.debug(f"set_boundries: {set_boundries}")
 
     if len(set_boundries) != number_models:
         texto = f"The number of set of boundries is not equal to the number of classes (|{len(set_boundries)}| != {number_models})."
@@ -297,7 +291,6 @@ def check_and_set_regression_boundaries(args:dict):
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.debug(f"rangos: {rangos}")
         num_boundries = len(rangos)
-        #model = args[cons.MODEL][i]
 
         if num_boundries != args[cons.NUMBER_CLASSES]:
             if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
@@ -313,15 +306,14 @@ def check_and_set_regression_boundaries(args:dict):
                 argparse.ArgumentError(None, texto)
 
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-            logger.info(f"rangos: {rangos}")
+            logger.debug(f"rangos: {rangos}")
             logger.debug(f"list_regression_models[{i}][0]: {list_regression_models[i][0]}")            
 
         boundries[list_regression_models[i][0]] = Tensor(list(map(float, rangos)))
-        #boundries.append(Tensor(list(map(float, rangos))))
     
     args[cons.REGRESSION_CLASS_BOUNDARIES] = boundries
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-            logger.info(f"args[cons.REGRESSION_CLASS_BOUNDARIES]: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
+            logger.debug(f"args[cons.REGRESSION_CLASS_BOUNDARIES]: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
     
 # -- Fin check_and_set_regression_boundaries -- #
 

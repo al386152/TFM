@@ -73,7 +73,6 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                 if is_main_device:
                     if not os.path.isdir(path_images_folder):
                         os.makedirs(path_images_folder)
-                        #os.mkdir(path_images_folder)
                         
                     name_file = f"{args[cons.MODEL]}_{name}{cons.IMAGES_FILE_FORMAT}"                    
                     name_file = os.path.join(path_images_folder, name_file)
@@ -88,7 +87,6 @@ def get_metrics(list_metrics: list, args:dict, save_confusion_matrix = False, is
                 logger.debug(f"Other metric")
 
             resultados[name] = metric.compute().item()
-    #logger.info(f"Resultados: {resultados}")
     return resultados
 # -- Fin get_metrics -- #
     
