@@ -21,7 +21,7 @@ class Ensemble(torch.nn.Module):
     #
 
     def __init__(self, list_models:list, device:torch.device, types_models:dict, 
-                 regression_class_boundaries:list, weight_votations:dict = None,
+                 regression_class_boundaries:dict, weight_votations:dict = None,
                  is_main_device:bool = False, num_classes = 5, 
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,11 +41,14 @@ class Ensemble(torch.nn.Module):
         #    # capas_entrenar_final=  1: Se entrena al menos el clasificador. 0, no se entrena nada. -1 se entrena todo.
         #    mr.transfer_learning(model=model, capas_entrenar_final = 1, is_main_device=is_main_device)
 
-        if self.is_main_device:
-            logger.info(f"Ensemble created with the following models:\n{self.list_model_names}")
+        if self.is_main_device:            
+            logger.info(f"Ensemble created with the following models:\n{[(self.list_model_names[i], self.types_models[i]) for i in range(len(self.types_models))]}")
 
     def get_list_models(self):
         return self.list_model_names
+
+    def __str__(self):
+        return f"{super().__str__()} - {str([(self.list_model_names[i], self.types_models[i]) for i in range(len(self.types_models))])}"
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         
@@ -71,11 +74,12 @@ class Ensemble(torch.nn.Module):
 
             output = model(x).to(self.device)
             if self.is_main_device:
-                logger.info(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}") # TODO: Convertir en debugs
-                logger.info(f"self.regression_class_boundaries[{i}] {self.regression_class_boundaries[i]}") # TODO: Convertir en debugs
+                logger.info(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}")
 
             if self.types_models[i] == MODEL_TYPE_REGRESSION:
-                # TODO: regression_class_boundaries no debería ser un diccionario (hay que cambiarlo, y deberíamos pasar la lista, no la lista de listas)
+                if self.is_main_device:
+                    logger.info(f"self.regression_class_boundaries[{i}] {self.regression_class_boundaries[i]}") # TODO: Convertir en debugs
+
                 output = mr.from_regression_to_classification(outputs=output, boundaries=self.regression_class_boundaries[i].to(self.device), 
                                                               num_classes=self.num_classes, device=self.device)
             if self.is_main_device:

@@ -269,42 +269,44 @@ def check_and_set_regression_boundaries(args:dict):
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.debug(f"args[cons.ENSEMBLE_TYPE_MODEL]: {args[cons.ENSEMBLE_TYPE_MODEL]}")
 
-    list_regression_models = list(filter(lambda model: model == cons.MODEL_TYPE_REGRESSION,
-                                args[cons.ENSEMBLE_TYPE_MODEL]))
+    list_regression_models = list(filter(lambda tuple: tuple[1] == cons.MODEL_TYPE_REGRESSION,
+                                enumerate(args[cons.ENSEMBLE_TYPE_MODEL])))
 
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.info(f"list_regression_models: {list_regression_models}")
 
     number_models = len(list_regression_models)
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+        logger.info(f"number_models: {number_models}| range(number_models): {range(number_models)}")
 
     set_boundries = args[cons.REGRESSION_CLASS_BOUNDARIES].split(cons.SEPARADOR_SPLIT_CLASS_BOUNDRIES)
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.info(f"set_boundries: {set_boundries}")
 
-    if len(set_boundries) < number_models:
-        texto = f"The number of set of boundries is not equal to the number of classes (|{len(boundries)}| != {number_models})."
+    if len(set_boundries) != number_models:
+        texto = f"The number of set of boundries is not equal to the number of classes (|{len(set_boundries)}| != {number_models})."
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.error(texto)
         argparse.ArgumentError(None, texto)
     
-    boundries = list()
+    boundries = dict()
     # Vamos a comprobar que los límites estén bien.
     for i in range(number_models):
 
         rangos = set_boundries[i].split(cons.SEPARADOR_CLASS_BOUNDRIES) 
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-            logger.info(f"rangos: {rangos}")
+            logger.debug(f"rangos: {rangos}")
         num_boundries = len(rangos)
-        model = args[cons.MODEL][i]
+        #model = args[cons.MODEL][i]
 
-        if num_boundries < args[cons.NUMBER_CLASSES]:
+        if num_boundries != args[cons.NUMBER_CLASSES]:
             if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
                 texto = f"The number of boundries is not equal to the number of classes (|{rangos}| != {args[cons.NUMBER_CLASSES]})."
                 logger.error(texto)
             argparse.ArgumentError(None, texto)
 
-        for i in range(num_boundries-1):
-            if rangos[i] >= rangos[i+1]: 
+        for j in range(num_boundries-1):
+            if rangos[j] >= rangos[j+1]: 
                 if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
                     texto = f"Every number must be greater than the previous one {rangos}."
                     logger.error(texto)
@@ -312,11 +314,15 @@ def check_and_set_regression_boundaries(args:dict):
 
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.info(f"rangos: {rangos}")
+            logger.debug(f"list_regression_models[{i}][0]: {list_regression_models[i][0]}")            
 
-        #boundries[model] = Tensor(list(map(float, rangos)))
-        boundries.append(Tensor(list(map(float, rangos))))
+        boundries[list_regression_models[i][0]] = Tensor(list(map(float, rangos)))
+        #boundries.append(Tensor(list(map(float, rangos))))
     
     args[cons.REGRESSION_CLASS_BOUNDARIES] = boundries
+    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+            logger.info(f"args[cons.REGRESSION_CLASS_BOUNDARIES]: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
+    
 # -- Fin check_and_set_regression_boundaries -- #
 
 def check_args(args:dict):    
