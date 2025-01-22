@@ -104,8 +104,7 @@ def get_args_parser():
         help="True: Se va a realizar una búsqueda de hiperparámetros.")
     
     parser.add_argument(f"--{cons.OPTIMIZER}", default="Adam", type=str, 
-                        help=f"""List of optimizer's names separated by \"{cons.SEPARADOR_SPLIT_OPTIMIZERS}\" (Example: Adam,SGD). The number of optimizers must be the same as the number of models, and the optimizer number "i" will be associated to the model number "i" passed as parameter.
-                        Options: {str(cons.SWITCH_OPTIMIZERS.keys()).replace('[', '').replace(']', '')}""")
+                        help=f"Optimizer that will be used during training. Options: {str(cons.SWITCH_OPTIMIZERS.keys()).replace('[', '').replace(']', '')}")
     
     parser.add_argument(f"--{cons.LOSS_FUNCTION}", default="MSE", type=str, 
                     help=f"Loss function's name. Options: {str(cons.SWITCH_LOSS_FUNCTIONS.keys()).replace('[', '').replace(']', '')}")
@@ -243,24 +242,13 @@ def set_list_no_augment_classes(args:dict):
     args[cons.NO_DATA_AUGMENT_CLASSES] = args[cons.NO_DATA_AUGMENT_CLASSES].split(cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES)
 # -- Fin set_list_no_augment_classes -- #
 
-def check_and_set_optimizers(args:dict):
-    list_optims = args[cons.OPTIMIZER].split(cons.SEPARADOR_SPLIT_OPTIMIZERS)
-
-    num_modelos = len(args[cons.MODEL])
-    if len(list_optims) != num_modelos:
-        texto = f"El número de optimizadores ({len(list_optims)}) no coincide con el número de modelos ({num_modelos})."
+def check_optimizer(args:dict):
+    if args[cons.OPTIMIZER] not in cons.SWITCH_OPTIMIZERS.keys():
+        texto = f"{args[cons.OPTIMIZER]}. Received: {args[cons.OPTIMIZER]}. Expected one of {str(cons.SWITCH_OPTIMIZERS.keys())}"
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
             logger.error(texto)
-        argparse.ArgumentError(None, texto) 
-
-    for optim in list_optims:
-        if optim not in cons.SWITCH_OPTIMIZERS.keys():
-            texto = f"{optim}. Received: {args[cons.OPTIMIZER]}. Expected one of {str(cons.SWITCH_OPTIMIZERS.keys())}"
-            if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-                logger.error(texto)
-            argparse.ArgumentError(None, texto)
-    args[cons.OPTIMIZER] = list_optims
-# -- Fin check_and_set_optimizers -- #    
+        argparse.ArgumentError(None, texto)
+# -- Fin check_optimizer -- #    
 
 def check_and_set_regression_boundaries(args:dict):
     
@@ -331,7 +319,7 @@ def check_args(args:dict):
     set_list_no_augment_classes(args)
     check_and_set_type_models(args)
     check_and_set_regression_boundaries(args)
-    check_and_set_optimizers(args)
+    check_optimizer(args)
 # -- Fin check_args -- #
 
 

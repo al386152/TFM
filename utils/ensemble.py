@@ -19,7 +19,7 @@ class Ensemble(torch.nn.Module):
     #       -> el valor es el peso de la votación de ese modelo en esa clase
     def __init__(self, list_models:list, device:torch.device, types_models:dict, 
                  regression_class_boundaries:dict, weight_votations:dict = None,
-                 is_main_device:bool = False, num_classes:int = 5, freeze_models_weights:bool = False,
+                 is_main_device:bool = False, num_classes:int = 5,
                  create_classifier:bool = False,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,13 +36,14 @@ class Ensemble(torch.nn.Module):
 
         self.list_model_names = [nombre for nombre,_ in list_models]
 
-        if freeze_models_weights:
-            for model in self.list_models:
-                for param in model.parameters():
-                    param.requires_grad = False
+        # Se congelan los pesos de los modelos ya preentrenados
+        for _,model in self.list_models:
+            for param in model.parameters():
+                param.requires_grad = False
 
         if create_classifier:
-            # Van a haber tantas entradas como el número de clases (salidas del clasificador de cada modelo) por cada modelo.
+            # TODO: Hacer que sea la salida del clasificador sin transformar los datos de los modelos de regresión
+            # Van a haber tantas entradas como el número de clases (salidas de los clasificadores) por cada modelo.
             self.classifier = torch.nn.Linear(num_classes * len(self.list_models), num_classes)
         else:
             self.classifier = None
@@ -51,18 +52,20 @@ class Ensemble(torch.nn.Module):
         if self.is_main_device:            
             logger.info(f"Ensemble created with the following models:\n{[(self.list_model_names[i], self.types_models[i]) for i in range(len(self.types_models))]}")
 
+    # Aunque Code diga que no, se utiliza en "trining.py"
     def get_list_models(self):
-        return self.list_model_names
+        return self.list_models
 
     def __str__(self):
-        return f"{super().__str__()} - {str([(self.list_model_names[i], self.types_models[i]) for i in range(len(self.types_models))])}"
+        return f"{super().__str__()} - {str([(self.list_model_names[i], self.types_models[i]) for i in range(len(self.types_models))]).replace('[', '').replace(']', '')}"
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:   
         
-        x = x.clone() # Por si acaso se modifica la entrada original
+        x = x.clone().to(self.device) # Por si acaso se modifica la entrada original
 
         if self.is_main_device:
-            logger.debug(f"self.list_models:\n{self.list_models}")
+            logger.debug(f"self.list_models:\n{self.list_models}") # TODO: hacer debug
+            logger.debug(f"x:\n{x}") # TODO: hacer debug
 
         # Obtenemos las salidas de todos los modelos
         models_outputs = list()
@@ -84,20 +87,21 @@ class Ensemble(torch.nn.Module):
             #else: output = output # La salida ya está en el formato de una de clasificación.
 
             if self.is_main_device:
-                logger.debug(f"output: {output}\ntype(output): {type(output)}\nself.weight_votations: {self.weight_votations}\ntype(self.weight_votations): {type(self.weight_votations)}")                                                
+                logger.debug(f"output: {output.size()}") # TODO: Convertir en debug
+                logger.debug(f"output: {output}\ntype(output): {type(output)}\nself.weight_votations: {self.weight_votations}\ntype(self.weight_votations): {type(self.weight_votations)}")
 
-            if self.classifier is not None:            
+            if self.classifier is None:            
                 # Se pondera la salida en función de los pesos y se añade a la lista desde la cual se van a acumular todos.
                 output *= self.weight_votations[i].to(self.device)
                 if self.is_main_device:
                     logger.debug(f"output - tras producto:\n{output}")
             #else: No se modifican las salidas, el plan es que lo haga el clasificador.
-            models_outputs.append(output)
+            models_outputs.append(output.to(self.device))
 
         if self.is_main_device:
             logger.debug(f"Models outputs - post weighted:\n{models_outputs}\ntype(models_outputs]): {type(models_outputs)}")
         
-        if self.classifier is not None:
+        if self.classifier is None:
             # Acumulamos las votaciones de cada modelo y los normalizamos
             votations = sum(models_outputs).to(self.device)
 
@@ -112,11 +116,13 @@ class Ensemble(torch.nn.Module):
         else:
             models_outputs = torch.stack(models_outputs).to(self.device)
             if self.is_main_device:                
-                logger.info(f"torch.stack(models_outputs): {models_outputs}") # TODO: convertir en debug
+                logger.info(f"torch.stack(models_outputs).size(): {models_outputs.size()}") #convertir en debug
+                logger.debug(f"torch.stack(models_outputs): {models_outputs}")
 
-            result = self.classifier(models_outputs)
+            result = self.classifier(models_outputs).to(self.device)
 
             if self.is_main_device:                
-                logger.info(f"result: {result}") # TODO: convertir en debug
+                logger.debug(f"result: {result}")
+                logger.info(f"result.size(): {result.size()}") # TODO: convertir en debug
 
         return result

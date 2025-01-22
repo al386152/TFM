@@ -36,8 +36,8 @@ class EarlyStopper:
 # --  Fin class EarlyStopper -- #
 
 
-def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
-                    loss_func, list_optimizers = None, is_main_device=True, debuging=False):
+def train_one_epoch(args:dict, model:torch.nn.Module, training_loader:list, device:torch.device, estimacion_duracion:float,
+                    loss_func, optimizer = None, is_main_device:bool=True, debuging:bool=False):
         
     size_batches = len(training_loader)    
     log_info_cada = int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) if int(size_batches * cons.TANTO_POR_UNO_LOGS_PRINT) > 0 else 1
@@ -61,11 +61,10 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
         inputs, labels = inputs.to(device), labels.to(device)
         
         if is_main_device:
-            logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
-            logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
+            logger.info(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
+            logger.info(f"Labels shape: {labels.shape}, labels: {labels}")
 
-        for optimizer in list_optimizers:
-            optimizer.zero_grad()
+        optimizer.zero_grad()
         outputs = model(inputs)
 
         if args[cons.IS_REGRESSION]:
@@ -81,8 +80,7 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
 
         loss = loss_func(outputs, labels)
         loss.backward()
-        for optimizer in list_optimizers:
-            optimizer.step()
+        optimizer.step()
         
         if is_main_device:
             if debuging or (i % log_info_cada == 0):
@@ -109,7 +107,9 @@ def train_one_epoch(args, model, training_loader, device, estimacion_duracion,
     return estimacion_duracion
 # --  Fin train_one_epoch -- #
 
-def train_model(args: dict, model, dataloaders, is_main_device, device, lista_metricas, proporcion_clases=None, metricas_regresion=None):
+def train_model(args: dict, model: torch.nn.Module, dataloaders:torch.utils.data.DataLoader, 
+                is_main_device:bool, device: torch.device, lista_metricas:list, 
+                proporcion_clases:list=None, metricas_regresion:list=None):
     
     if is_main_device:
         logger.info( ('-' * cons.NUM_GUIONES) + "Starting to train the model" + ('-' * cons.NUM_GUIONES) )
@@ -128,17 +128,14 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
     early_stopper = EarlyStopper(patience=args[cons.EARLY_STOPPING_PATIENCE] if args[cons.EARLY_STOPPING_PATIENCE] != -1 else args[cons.EPOCS], 
                                  min_delta=args[cons.EARLY_STOPPING_MIN_DELTA])
     
-    list_optimizers = list()
-    list_schedulers = list()
-    list_models = model.get_list_models()
-    for i in range(len(list_models)):
-        optim = args[cons.OPTIMIZER][i]        
-        if optim == "SGD":
-            optimizer = cons.SWITCH_OPTIMIZERS[optim](list_models[i].parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)                
-        else: 
-            optimizer = cons.SWITCH_OPTIMIZERS[optim](list_models[i].parameters(), lr=args[cons.LEARNING_RATE])
-        list_optimizers.append(optimizer)        
-        list_schedulers.append(ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE))
+
+    optim = args[cons.OPTIMIZER]
+    if optim == "SGD":
+        optimizer = cons.SWITCH_OPTIMIZERS[optim](model.parameters(), lr=args[cons.LEARNING_RATE], momentum=0.9)                
+    else: 
+        optimizer = cons.SWITCH_OPTIMIZERS[optim](model.parameters(), lr=args[cons.LEARNING_RATE])
+        
+    scheduler = ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE)
     
 
     # Creando carpetas para las salidas  
@@ -171,7 +168,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
         model.train(True)
         est_duracion_batch = train_one_epoch(args=args, model=model, device=device, 
                                              training_loader=dataloaders[cons.TRAIN_FOLDER_NAME],  
-                                             loss_func=loss_fn, list_optimizers=list_optimizers, 
+                                             loss_func=loss_fn, optimizer=optimizer, 
                                              estimacion_duracion=est_duracion_batch, 
                                              is_main_device=is_main_device, 
                                              debuging=args[cons.SHOW_DEBUG_OUTPUTS])
@@ -181,8 +178,7 @@ def train_model(args: dict, model, dataloaders, is_main_device, device, lista_me
                                          loss_fn=loss_fn, save_confusion_matrix=False, nombre_prueba="Validation", 
                                          metricas_regression=metricas_regresion)
 
-        for scheduler in list_schedulers:
-            scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
+        scheduler.step(dict_resultados[cons.EPOCH_LOSS])        
 
         if dict_resultados[main_metric] < best_metric:
             best_metric = dict_resultados[main_metric]
