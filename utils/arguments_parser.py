@@ -158,18 +158,19 @@ def set_weights_paths(args:dict):
     if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
         logger.debug(f"args[{cons.MODEL_WEIGHTS}]: {args[cons.MODEL_WEIGHTS]}")
 
-    weights = args[cons.MODEL_WEIGHTS].split(cons.SEPARADOR_WEIGTHS_PATHS)
-    if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-        logger.debug(f"weights: {weights}")
-
-    num_modelos = len(args[cons.MODEL])
-    if len(weights) != num_modelos:
-        texto = f"El número de rutas a los pesos ({len(weights)}) no coincide con el número de modelos ({num_modelos})."
+    if args[cons.MODEL_WEIGHTS] is not None:
+        weights = args[cons.MODEL_WEIGHTS].split(cons.SEPARADOR_WEIGTHS_PATHS)
         if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
-            logger.error(texto)
-        argparse.ArgumentError(None, texto)
-
-    args[cons.MODEL_WEIGHTS] = weights
+            logger.debug(f"weights: {weights}")
+    
+        num_modelos = len(args[cons.MODEL])
+        if len(weights) != num_modelos:
+            texto = f"El número de rutas a los pesos ({len(weights)}) no coincide con el número de modelos ({num_modelos})."
+            if ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0):
+                logger.error(texto)
+            argparse.ArgumentError(None, texto)
+    
+        args[cons.MODEL_WEIGHTS] = weights
 # -- Fin set_weights_paths -- #
 
 
