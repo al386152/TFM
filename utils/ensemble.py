@@ -87,7 +87,7 @@ class Ensemble(torch.nn.Module):
                 if self.is_main_device:
                     logger.debug(f"self.regression_class_boundaries[{i}] {self.regression_class_boundaries[i]}")
 
-                output = mr.from_regression_to_classification(outputs=output, boundaries=self.regression_class_boundaries[i], 
+                output = mr.from_regression_to_classification(outputs=output, boundaries=(self.regression_class_boundaries[i].to(device=self.device)), 
                                                               num_classes=self.num_classes, device=self.device)
             #else: output = output # La salida ya está en el formato de una de clasificación.
 
@@ -97,7 +97,7 @@ class Ensemble(torch.nn.Module):
 
                      
             # Se pondera la salida en función de los pesos y se añade a la lista desde la cual se van a acumular todos.
-            output *= self.weight_votations[i]
+            output *= (self.weight_votations[i].to(device=self.device))
             if self.is_main_device: logger.debug(f"output - tras producto:\n{output}")
             #else: No se modifican las salidas, el plan es que lo haga el clasificador.
             models_outputs.append(output.to(device=self.device))
