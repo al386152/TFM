@@ -65,7 +65,7 @@ def train_one_epoch(args:dict, model:torch.nn.Module, training_loader:list, devi
             logger.info(f"Labels shape: {labels.shape}, labels: {labels}")
 
         optimizer.zero_grad()
-        outputs = model(inputs)
+        outputs = model(inputs)       
 
         if args[cons.IS_REGRESSION]:
             outputs = outputs.reshape(labels.shape)
@@ -73,7 +73,8 @@ def train_one_epoch(args:dict, model:torch.nn.Module, training_loader:list, devi
         outputs = outputs.to(device)
 
         if is_main_device:
-            logger.debug(f"outputs shape: {outputs.shape}, outputs: {outputs}")
+            logger.info(f"outputs shape: {outputs.shape}, min: {outputs.min()}, max: {outputs.max()}, mean: {outputs.mean()}\n")
+            logger.debug(f"outputs: {outputs}")
 
         if args[cons.IS_DISTRIBUTED]:
             torch.distributed.barrier()
