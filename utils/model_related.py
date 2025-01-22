@@ -311,7 +311,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
         model = Ensemble(list_models=list_models, weight_votations=args[cons.ENSEMBLE_VOTATION_WEIGHTS],
                          types_models=args[cons.ENSEMBLE_TYPE_MODEL], 
                          regression_class_boundaries= args[cons.REGRESSION_CLASS_BOUNDARIES],
-                         create_classifier=cons.ENSEMBLE_CREATE_CLASSIFIER,
+                         create_classifier=args[cons.ENSEMBLE_CREATE_CLASSIFIER],
                          is_main_device=is_main_device, device=device)
     else:
         _, model = list_models[0]
