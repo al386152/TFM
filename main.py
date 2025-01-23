@@ -28,9 +28,6 @@ def main(args: dict):
     if is_main_device:
         logger.info(f"Device: {device}")
 
-    if args[cons.IS_REGRESSION]:
-        args[cons.REGRESSION_CLASS_BOUNDARIES] = args[cons.REGRESSION_CLASS_BOUNDARIES].to(device)
-
     model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
 
     if is_main_device:
