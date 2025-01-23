@@ -10,7 +10,6 @@ from torch import Tensor
 
 logger = getLogWritter(__name__)
 
-# TODO: Poner la ayuda en un mismo idioma.
 def get_args_parser():
     parser = argparse.ArgumentParser(prog="Proyecto", description="Modelo")
     

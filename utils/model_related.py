@@ -178,7 +178,6 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
                 if is_main_device:
                     logger.debug(f"boundaries: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
 
-                # TODO: si el clasificador es de regresión, hace falta hacer unos umbrales para la capa (a parte de lo otro)
                 regression_outputs = outputs.reshape(labels.shape).to(device)
                 m.update_metrics(metricas_regression, outputs=regression_outputs, labels=labels)
                 
@@ -203,7 +202,6 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
             logger.info(f"{name}:\n{dict_resultados[name]}" if (name == cons.CONFUSION_MATRIX or name == cons.NORM_CONFUSION_MATRIX)  \
                         else f"{name}: {dict_resultados[name]:.4f}")
 
-        # TODO: Revisar por qué no funciona bien las métricas de la regresión.
         if args[cons.IS_REGRESSION]:
             dict_resultados_regresion = m.get_metrics(metricas_regression, args=args, save_confusion_matrix=save_confusion_matrix, 
                                                         is_main_device=is_main_device)        
@@ -273,7 +271,6 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
 
         if is_main_device:
             logger.info(f"modify_model_layers")        
-        # TODO: Hacer bien
         modify_model_layers(model=model, model_name=model_name, args=args)
         if is_main_device:
             logger.debug(f"model.to(device)")

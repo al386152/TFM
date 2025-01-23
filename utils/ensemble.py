@@ -42,7 +42,6 @@ class Ensemble(torch.nn.Module):
                 param.requires_grad = False
 
         if create_classifier:
-            # TODO: Hacer que sea la salida del clasificador sin transformar los datos de los modelos de regresión
             # Van a haber tantas entradas como el número de clases (salidas de los clasificadores) por cada modelo.
             num_modelos = len(self.list_models)
             num_regresion = len(list(filter(lambda model: model == MODEL_TYPE_REGRESSION, self.types_models)))
@@ -133,7 +132,7 @@ class Ensemble(torch.nn.Module):
         result = self.classifier(models_outputs).to(device=self.device)
 
         if self.is_main_device:             
-            logger.debug(f"result.size(): {result.size()}") # TODO: convertir en debug   
+            logger.debug(f"result.size(): {result.size()}")
             logger.debug(f"result: {result}")            
     
         return result

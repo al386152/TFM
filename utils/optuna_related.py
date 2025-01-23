@@ -63,7 +63,6 @@ def show_and_save_results(study:optuna.Study, args:dict):
     save_plot(args=args, name="Time_Plot")
 # -- FIN save_plot -- #
 
-# TODO: Comprobar de que vaya
 def modify_model_layers(model:torch.nn.Module, model_name:str, trial:optuna.Trial):
 
     mod_classifier_layer = list()
