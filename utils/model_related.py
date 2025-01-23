@@ -178,9 +178,10 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
                 if is_main_device:
                     logger.debug(f"boundaries: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
 
+                # TODO: si el clasificador es de regresión, hace falta hacer unos umbrales para la capa (a parte de lo otro)
                 regression_outputs = outputs.reshape(labels.shape).to(device)
                 m.update_metrics(metricas_regression, outputs=regression_outputs, labels=labels)
-                outputs = from_regression_to_classification(outputs=outputs, boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES], 
+                outputs = from_regression_to_classification(outputs=outputs, boundaries=(args[cons.REGRESSION_CLASS_BOUNDARIES][-1].to(device=device)),
                                                             num_classes=args[cons.NUMBER_CLASSES], device=device)
                 
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
