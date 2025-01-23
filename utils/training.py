@@ -136,7 +136,10 @@ def train_model(args: dict, model: torch.nn.Module, dataloaders:torch.utils.data
     else: 
         optimizer = cons.SWITCH_OPTIMIZERS[optim](model.parameters(), lr=args[cons.LEARNING_RATE])
         
-    scheduler = ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE)
+    #scheduler = ReduceLROnPlateau(optimizer, mode='max', patience=cons.REDUCE_ON_PLATEAU_PATIENCE)
+    scheduler = ReduceLROnPlateau(optimizer, mode='max', patience=args[cons.REDUCE_ON_PLATEAU_PATIENCE],
+                                  factor=args[cons.REDUCE_ON_PLATEAU_RATE_FACTOR], 
+                                  threshold=args[cons.REDUCE_ON_PLATEAU_RATE_THRESHOLD])
     
 
     # Creando carpetas para las salidas  

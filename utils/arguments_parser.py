@@ -24,7 +24,16 @@ def get_args_parser():
                          f"Ejemplos: 224 ==> Imagen cuadrada de 224x224. 512{cons.SEPARADOR_INPUT_IMAGENES}214: Imagen de 512 de altura y 214 de anchura"
                             )
 
-    parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=0.0000245, help="learning rate")
+    parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=0.01, help="learning rate")
+    
+    parser.add_argument(f"--{cons.REDUCE_ON_PLATEAU_PATIENCE}", type=int, default=-1, 
+                        help="Number of epochs without improvement before the learning rate is reduced")
+    
+    parser.add_argument(f"--{cons.REDUCE_ON_PLATEAU_RATE_FACTOR}", type=float, default=0.1, 
+                        help="Number of epochs without improvement before the learning rate is reduced")
+
+    parser.add_argument(f"--{cons.REDUCE_ON_PLATEAU_RATE_THRESHOLD}", type=float, default=1e-4, 
+                        help="Number of epochs without improvement before the learning rate is reduced")
 
     parser.add_argument(f"--{cons.EARLY_STOPPING_PATIENCE}", type=int, default=-1, 
         help="Número de épocas sin suficientes cambios para que finalice el entrenamiento antes de tiempo (si es -1, está \"desactivado\").")
@@ -120,11 +129,13 @@ def get_args_parser():
     parser.add_argument(f"--{cons.REGRESSION_CLASS_BOUNDARIES}", type=str, default=f"0{cons.SEPARADOR_CLASS_BOUNDRIES}1{cons.SEPARADOR_CLASS_BOUNDRIES}2{cons.SEPARADOR_CLASS_BOUNDRIES}3{cons.SEPARADOR_CLASS_BOUNDRIES}4",
                         help=f"The boundries to convert the regression outputs into classification-like values. The numbers must be separated by '{cons.SEPARADOR_CLASS_BOUNDRIES}' and must be greater than the previous one. The number of boundries must coincide with the number of classes. In the case of creating an Ensemble, the number of set of boundaries must be equal to the number of regression models or, if a new regresion layer is going to be created, must be one more boundaries than regression models (this last one will be for the new last layer).")
     
-    parser.add_argument(f"--{cons.ENSEMBLE_TYPE_MODEL}", type=str, default=f"classifier",
+    parser.add_argument(f"--{cons.ENSEMBLE_TYPE_MODEL}", type=str, default="classifier",
                         help=f"The ensemble models' types. It is a list of models separated by '{cons.SEPARATOR_ENSEMBLE_TYPE_MODEL}'. The number of model's type must coincide with the number of models. The model's types are: {cons.ENSEMBLE_MODEL_TYPES}")
     
     parser.add_argument(f"--{cons.ENSEMBLE_CREATE_CLASSIFIER}", action='store_true', default=False,
                     help="Create a classifier layer instead of using votation weights for ensemble models")
+
+    
 
     return parser
 # -- Fin get_args_parser -- #
