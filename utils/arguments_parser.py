@@ -15,16 +15,19 @@ def get_args_parser():
     parser = argparse.ArgumentParser(prog="Proyecto", description="Modelo")
     
     parser.add_argument(f"--{cons.BATCH_SIZE}", default=64, type=int,
-                    help="Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus")
+                        help="Batch size per GPU")
+                    #help="Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus)")
     
-    parser.add_argument(f"--{cons.EPOCS}", default=50, type=int)
+    parser.add_argument(f"--{cons.EPOCS}", default=50, type=int,
+                        help="Number of epochs")
 
     parser.add_argument(f"--{cons.INPUT_SIZE}", default='524x224', type=str,
-                    help=f"Usos:\n\t-Un solo número: imagen cuadrada.\n\tDos números separados por \'{cons.SEPARADOR_INPUT_IMAGENES}\': [altura de la imagen]{cons.SEPARADOR_INPUT_IMAGENES}[anchura de la imagen]"+
-                         f"Ejemplos: 224 ==> Imagen cuadrada de 224x224. 512{cons.SEPARADOR_INPUT_IMAGENES}214: Imagen de 512 de altura y 214 de anchura"
+                    help=f"Uses:\n\t-One number: square image.\n\tTwo numbers separted by \'{cons.SEPARADOR_INPUT_IMAGENES}\': [image's height]{cons.SEPARADOR_INPUT_IMAGENES}[image's width]"+
+                         f"Examples: 224 ==> 224x224 square image. 512{cons.SEPARADOR_INPUT_IMAGENES}214: image of 512 pixels of height and 214 pixels of width"
                             )
 
-    parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=0.01, help="learning rate")
+    parser.add_argument(f"--{cons.LEARNING_RATE}", type=float, default=0.01, 
+                        help="learning rate")
     
     parser.add_argument(f"--{cons.REDUCE_ON_PLATEAU_PATIENCE}", type=int, default=-1, 
                         help="Number of epochs without improvement before the learning rate is reduced")
@@ -36,9 +39,9 @@ def get_args_parser():
                         help="Number of epochs without improvement before the learning rate is reduced")
 
     parser.add_argument(f"--{cons.EARLY_STOPPING_PATIENCE}", type=int, default=-1, 
-        help="Número de épocas sin suficientes cambios para que finalice el entrenamiento antes de tiempo (si es -1, está \"desactivado\").")
+                        help="Number of epochs without enought changes to early finish the traning (if it is -1, it is deactivated)")
     parser.add_argument(f"--{cons.EARLY_STOPPING_MIN_DELTA}", type=float, default=0.5, 
-        help="Diferencía mínima en las últimas etapas para que el contador del \"early stopper\" avance.") 
+                        help="Minimum difference between epoch to make the \"early stopper\"\'s counter to advance.") 
         
     parser.add_argument(f"--{cons.NUMBER_CLASSES}", default=5, type=int,
                         help="number of the classification types")
@@ -67,61 +70,66 @@ def get_args_parser():
                         help=f"The model's name or, if it's a ensemble, a list of models separated by {cons.SEPARADOR_ENSEMBLE}. Example: vgg19{cons.SEPARADOR_ENSEMBLE}resnet50")
     
     parser.add_argument(f"--{cons.PARTIAL_MODELS_PATH}", default="./partial_models", type=str,
-                    help="Path to the folder where the best models will be stored")    
+                        help="Path to the folder where the best models will be stored")    
 
     parser.add_argument(f"--{cons.MODEL_WEIGHTS}", default=None, type=str,
-                help=f"Model's weights path. In case an ensemble is going to be used, the different paths must be separated by: {cons.SEPARADOR_WEIGTHS_PATHS}. It is assumed that the weights' path is in the same order as the models passed as parameters.")
+                        help=f"Model's weights path. In case an ensemble is going to be used, the different paths must be separated by: {cons.SEPARADOR_WEIGTHS_PATHS}. It is assumed that the weights' path is in the same order as the models passed as parameters.")
     
     parser.add_argument(f"--{cons.NO_DATA_AUGMENT_CLASSES}", default='0', type=str,
-            help=f"List of classes that will not be augmented separated by a \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
+                        help=f"List of classes that will not be augmented separated by a \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
 
     parser.add_argument(f"--{cons.BATCH_AUGMENTATION}", default=0, type=int,
-            help=f"Número de veces que se reptien las muestras en un mismo batch. Se omiten las clases que aparecen en: \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
+                        help=f"Número de veces que se reptien las muestras en un mismo batch. Se omiten las clases que aparecen en: \"{cons.SEPARADOR_NO_DATA_AUGMENT_CLASSES}\".")
 
     parser.add_argument(f"--{cons.SHOW_DEBUG_OUTPUTS}", action='store_true', default=False,
-            help="Show the debug outputs")
+                        help="Show the debug outputs")
     
     parser.add_argument(f"--{cons.NOT_FREEZE_LAYERS}", default=-1, type=int,
-            help="Number of the last layers to not freeze their learning. If -1: the model will work as normal.")
+                        help="Number of the last layers to not freeze their learning. If -1: the model will work as normal.")
     
     parser.add_argument(f"--{cons.IS_DISTRIBUTED}", action='store_true', default=False,
-            help="True: the training is distributed. False: the training is only local.")
+                        help="True: the training is distributed. False: the training is only local.")
 
     parser.add_argument(f"--{cons.ENSEMBLE_VOTATION_WEIGHTS}", default="1,1,1,1,1", 
-                        help=f"""Los pesos de cada modelo para cada clase durante las votaciones. 
-                        Los pesos de cada clase están separados por {cons.SEPARATOR_VOTATION_CLASS} y los modelos por {cons.SEPARATOR_VOTATION_MODEL}.
-                        A cada clase se le asigna la lista de pesos de la votación en el mismo orden que se han pasado en el parámetro '--{cons.MODEL}'.
-                        Ejemplo con 3 clases y dos modelos: --{cons.MODEL} \"vgg19{cons.SEPARADOR_ENSEMBLE}resnet50\". --{cons.ENSEMBLE_VOTATION_WEIGHTS} \"1{cons.SEPARATOR_VOTATION_CLASS}0.5{cons.SEPARATOR_VOTATION_CLASS}0.1{cons.SEPARATOR_VOTATION_MODEL}0.5{cons.SEPARATOR_VOTATION_CLASS}1.3{cons.SEPARATOR_VOTATION_CLASS}0.8\"
-                        """)
+                        help= f"The weights of every model during the ensemble's votations.\n \
+                        The weights will be seperated by {cons.SEPARATOR_VOTATION_CLASS} and the models by {cons.SEPARATOR_VOTATION_MODEL}.\n \
+                        A votation weight will be assigned to every class in the same order as they have been passed in the parameter \'--{cons.MODEL}\'.\n\
+                        Example of 3 classes and two models: --{cons.MODEL} \"vgg19{cons.SEPARADOR_ENSEMBLE}resnet50\". --{cons.ENSEMBLE_VOTATION_WEIGHTS} \"1{cons.SEPARATOR_VOTATION_CLASS}0.5{cons.SEPARATOR_VOTATION_CLASS}0.1{cons.SEPARATOR_VOTATION_MODEL}0.5{cons.SEPARATOR_VOTATION_CLASS}1.3{cons.SEPARATOR_VOTATION_CLASS}0.8\"")
+        
+    parser.add_argument(f"--{cons.ROTATION_DEGREES}", default=75, type=float, 
+                        help=f"Maximum rotation degrees.")                        
+    parser.add_argument(f"--{cons.RANDOM_PERSPECTIVE_DISTORSION}", default=0.75, type=float, 
+                        help=f"Transformation's distorsion scale")                        
+    parser.add_argument(f"--{cons.P_HORIZONTAL_FLIP}", default=0.2, type=float, 
+                        help=f"Probability to apply a horizontal flip")    
+    parser.add_argument(f"--{cons.P_VERTICAL_FLIP}", default=0.6, type=float, 
+                        help=f"Probability to apply a vertical flip")
     
-    parser.add_argument(f"--{cons.ROTATION_DEGREES}", default=75, type=float, help=f"Grados de rotación máxima que pueden tener las imágenes.")
-    parser.add_argument(f"--{cons.RANDOM_PERSPECTIVE_DISTORSION}", default=0.75, type=float, help=f"Escala de la distorsión de la transformación.")
-    parser.add_argument(f"--{cons.P_HORIZONTAL_FLIP}", default=0.2, type=float, help=f"Probabilidad de que se realize un giro horizontal de la imagen.")
-    parser.add_argument(f"--{cons.P_VERTICAL_FLIP}", default=0.6, type=float, help=f"Probabilidad de que se realize un giro vertical de la imagen.")
 
     # Variables relacionadas con "Color Jitter"
     parser.add_argument(f"--{cons.COLOR_JITTER_BRIGHTNESS}", default="1", type=str, 
-                        help=f"No utilizar números negativos. Si es un solo número, el rango será: [max(0, 1 - N), 1 + N]. Si se dan dos número separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', esos serán el mínimo y máximo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
+                        help=f"Only non-negative numbers. If it's only a number, the range will be: [max(0, 1 - N), 1 + N]. If the input are two numbers separated by \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', those will be the minimum and the maximum: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
     parser.add_argument(f"--{cons.COLOR_JITTER_CONTRAST}", default="0.6", type=str, 
-                        help=f"No utilizar números negativos. Si es un solo número, el rango será: [max(0, 1 - N), 1 + N]. Si se dan dos número separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', esos serán el mínimo y máximo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
+                        help=f"Only non-negative numbers. If it's only a number, the range will be: [max(0, 1 - N), 1 + N]. If the input are two numbers separated by \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', those will be the minimum and the maximum: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
     parser.add_argument(f"--{cons.COLOR_JITTER_SATURATION}", default="0.1", type=str, 
-                        help=f"No utilizar números negativos. Si es un solo número, el rango será: [max(0, 1 - N), 1 + N]. Si se dan dos número separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', esos serán el mínimo y máximo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
+                        help=f"Only non-negative numbers. If it's only a number, the range will be: [max(0, 1 - N), 1 + N]. If the input are two numbers separated by \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \', those will be the minimum and the maximum: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"")
     parser.add_argument(f"--{cons.COLOR_JITTER_HUE}", default="0.4", type=str, 
-                        help=f"Si es un solo número se debe escoger entre [0, 0.5] y el resultado será [-hue, hue]. Si son dos números separados por \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \' (por ejemplo: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"), escoger valores en el intervalo [-0.5, 0.5] y el resultado será un número en el intervalo [min, max]")
+                        help=f"If the input it is only a number, it must be bewteen [0, 0.5] and the result will be [-hue, hue]. If the input are two numbers separated by \' {cons.SEPARADOR_INPUTS_COLOR_JITTER} \' (e.g.: \"min{cons.SEPARADOR_INPUTS_COLOR_JITTER}max\"), a value between [-0.5, 0.5] must be choosen and the result will be between [min, max]")
 
     parser.add_argument(f"--{cons.IS_HYPERTUNING}", action='store_true', default=False,
-        help="True: Se va a realizar una búsqueda de hiperparámetros.")
+                        help="True: to make a hiperparameter search.")
     
     parser.add_argument(f"--{cons.OPTIMIZER}", default="Adam", type=str, 
                         help=f"Optimizer that will be used during training. Options: {str(cons.SWITCH_OPTIMIZERS.keys()).replace('[', '').replace(']', '')}")
     
     parser.add_argument(f"--{cons.LOSS_FUNCTION}", default="MSE", type=str, 
-                    help=f"Loss function's name. Options: {str(cons.SWITCH_LOSS_FUNCTIONS.keys()).replace('[', '').replace(']', '')}")
+                        help=f"Loss function's name. Options: {str(cons.SWITCH_LOSS_FUNCTIONS.keys()).replace('[', '').replace(']', '')}")
 
-    parser.add_argument(f"--{cons.P_DROPOUT}", default=0.0, type=float, help=f"Probabilidad de que la capa de dropout se active")
+    parser.add_argument(f"--{cons.P_DROPOUT}", default=0.0, type=float, 
+                        help=f"Dropout layer's activation probability")    
 
     parser.add_argument(f"--{cons.INFERENCE}", action='store_true', default=False, 
-                        help=f"True si realizar una inferencia, False si no. Se utilizarán todas las imagenes disponibles en la ruta de los datos.")
+                        help=f"False: Training. True: inference; for this, all images stored on dataset's path will be used.")    
 
     parser.add_argument(f"--{cons.IS_REGRESSION}", action='store_true', default=False,
                         help="Is a regression model instead of a classifier.")
@@ -133,9 +141,7 @@ def get_args_parser():
                         help=f"The ensemble models' types. It is a list of models separated by '{cons.SEPARATOR_ENSEMBLE_TYPE_MODEL}'. The number of model's type must coincide with the number of models. The model's types are: {cons.ENSEMBLE_MODEL_TYPES}")
     
     parser.add_argument(f"--{cons.ENSEMBLE_CREATE_CLASSIFIER}", action='store_true', default=False,
-                    help="Create a classifier layer instead of using votation weights for ensemble models")
-
-    
+                        help="Create a classifier layer instead of using votation weights for ensemble models")
 
     return parser
 # -- Fin get_args_parser -- #
