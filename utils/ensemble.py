@@ -80,7 +80,7 @@ class Ensemble(torch.nn.Module):
             name_model, model = self.list_models[i]
 
             output = model(x).to(device=self.device)
-            if self.is_main_device: logger.info(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}")
+            if self.is_main_device: logger.debug(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}")
 
             # Transformando la salido para que tenga el formato de una de clasificación
             if self.types_models[i] == MODEL_TYPE_REGRESSION:
@@ -127,13 +127,13 @@ class Ensemble(torch.nn.Module):
         models_outputs = torch.concat([model(x).to(self.device)  for _, model in self.list_models], dim=1).to(device=self.device)
     
         if self.is_main_device:                
-            logger.info(f"torch.concat(models_outputs).size(): {models_outputs.size()}") #convertir en debug
+            logger.debug(f"torch.concat(models_outputs).size(): {models_outputs.size()}") #convertir en debug
             logger.debug(f"torch.concat(models_outputs): {models_outputs}")
 
         result = self.classifier(models_outputs).to(device=self.device)
 
         if self.is_main_device:             
-            logger.info(f"result.size(): {result.size()}") # TODO: convertir en debug   
+            logger.debug(f"result.size(): {result.size()}") # TODO: convertir en debug   
             logger.debug(f"result: {result}")            
     
         return result
