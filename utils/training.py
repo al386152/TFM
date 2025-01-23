@@ -61,8 +61,9 @@ def train_one_epoch(args:dict, model:torch.nn.Module, training_loader:list, devi
         inputs, labels = inputs.to(device), labels.to(device)
         
         if is_main_device:
-            logger.debug(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
-            logger.debug(f"Labels shape: {labels.shape}, labels: {labels}")
+            logger.info(f"Inputs shape: {inputs.shape}, min: {inputs.min()}, max: {inputs.max()}, mean: {inputs.mean()}")
+            logger.info(f"Labels shape: {labels.shape}, labels: {labels}")
+            logger.info(f"MODEL: {model}")
 
         optimizer.zero_grad()
         outputs = model(inputs)       
@@ -73,7 +74,7 @@ def train_one_epoch(args:dict, model:torch.nn.Module, training_loader:list, devi
         outputs = outputs.to(device)
 
         if is_main_device:
-            logger.debug(f"outputs shape: {outputs.shape}, min: {outputs.min()}, max: {outputs.max()}, mean: {outputs.mean()}\n")
+            logger.info(f"outputs shape: {outputs.shape}, min: {outputs.min()}, max: {outputs.max()}, mean: {outputs.mean()}\n")
             logger.debug(f"outputs: {outputs}")
 
         if args[cons.IS_DISTRIBUTED]:

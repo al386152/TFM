@@ -312,7 +312,14 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
                          types_models=args[cons.ENSEMBLE_TYPE_MODEL], 
                          regression_class_boundaries= args[cons.REGRESSION_CLASS_BOUNDARIES],
                          create_classifier=args[cons.ENSEMBLE_CREATE_CLASSIFIER],
+                         num_outpus= 1 if args[cons.IS_REGRESSION] else args[cons.NUMBER_CLASSES],
+                         num_classes=args[cons.NUMBER_CLASSES],
                          is_main_device=is_main_device, device=device)
+        
+        if args[cons.IS_DISTRIBUTED]:
+            if is_main_device:
+                logger.info(f"DistributedDataParallel")
+            model = DistributedDataParallel(model, device_ids=[device])
     else:
         _, model = list_models[0]
 

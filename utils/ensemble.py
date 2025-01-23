@@ -2,7 +2,7 @@ import torch
 
 import utils.model_related as mr
 from .log_writer import getLogWritter
-from .constants import MODEL_TYPE_REGRESSION
+from .constants import MODEL_TYPE_REGRESSION, IS_REGRESSION
 from .operations import normalize_tensor
 
 logger = getLogWritter(__name__)
@@ -19,7 +19,7 @@ class Ensemble(torch.nn.Module):
     #       -> el valor es el peso de la votación de ese modelo en esa clase
     def __init__(self, list_models:list, device:torch.device, types_models:dict, 
                  regression_class_boundaries:dict, weight_votations:dict = None,
-                 is_main_device:bool = False, num_classes:int = 5,
+                 is_main_device:bool = False, num_outpus:int = 5, num_classes:int=5,
                  create_classifier:bool = False,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,7 +29,7 @@ class Ensemble(torch.nn.Module):
         self.is_main_device = is_main_device
         self.list_models = list_models        
         self.weight_votations = weight_votations
-        self.num_classes = num_classes
+        self.num_outpus = num_outpus
         self.device = device
         self.types_models = types_models
         self.regression_class_boundaries = regression_class_boundaries        
@@ -49,12 +49,12 @@ class Ensemble(torch.nn.Module):
             # Los modelos de clasificación tienen tantas salidas como número de clases, pero los de regresión solo tienen una.
             num_entradas = num_classes * (num_modelos - num_regresion) + num_regresion
             
-            if self.is_main_device:            
-                logger.info(f"num_modelos: {num_modelos}, num_regresion: {num_regresion}\nself.types_models: {self.types_models}") # TODO: Borrar
-                logger.info(f"in_features: {num_entradas}, out_features: {num_classes}")
+            if self.is_main_device:
+                logger.info(f"num_modelos: {num_modelos}, num_regresion: {num_regresion}\nself.types_models: {self.types_models}")
+                logger.info(f"in_features: {num_entradas}, out_features: {self.num_outpus}")
 
 
-            self.classifier = torch.nn.Linear(in_features=num_entradas, out_features=num_classes, device=self.device)
+            self.classifier = torch.nn.Linear(in_features=num_entradas, out_features=self.num_outpus, device=self.device)
         else:
             self.classifier = None
         
@@ -80,7 +80,7 @@ class Ensemble(torch.nn.Module):
             name_model, model = self.list_models[i]
 
             output = model(x).to(device=self.device)
-            if self.is_main_device: logger.debug(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}")
+            if self.is_main_device: logger.info(f"self.types_models[{i}] ({name_model}) :\n{self.types_models[i]}\n Is regression: {self.types_models[i] == MODEL_TYPE_REGRESSION}")
 
             # Transformando la salido para que tenga el formato de una de clasificación
             if self.types_models[i] == MODEL_TYPE_REGRESSION:
@@ -88,11 +88,11 @@ class Ensemble(torch.nn.Module):
                     logger.debug(f"self.regression_class_boundaries[{i}] {self.regression_class_boundaries[i]}")
 
                 output = mr.from_regression_to_classification(outputs=output, boundaries=(self.regression_class_boundaries[i].to(device=self.device)), 
-                                                              num_classes=self.num_classes, device=self.device)
+                                                              num_classes=self.num_outpus, device=self.device)
             #else: output = output # La salida ya está en el formato de una de clasificación.
 
             if self.is_main_device:
-                logger.debug(f"output: {output.size()}") # TODO: Convertir en debug
+                logger.debug(f"output: {output.size()}")
                 logger.debug(f"output: {output}\ntype(output): {type(output)}\nself.weight_votations: {self.weight_votations}\ntype(self.weight_votations): {type(self.weight_votations)}")
 
                      
@@ -107,7 +107,9 @@ class Ensemble(torch.nn.Module):
         # Acumulamos las votaciones de cada modelo y los normalizamos
         votations = sum(models_outputs).to(device=self.device)
 
-        if self.is_main_device: logger.debug(f"type(votations):\n{type(votations)}\nPre-normalizado.  Votations results:\n{votations}")
+        if self.is_main_device: 
+            logger.debug(f"-Pre-normalizado-\ntype(votations):\n{type(votations)}\nvotations.size(): {votations.size()}")
+            logger.debug(f"Votations results:\n{votations}")
 
         #Normalizamos los valores        
         normalize_tensor(data=votations, output=(result:=torch.empty(votations.size()).to(device=self.device)) )
@@ -125,13 +127,13 @@ class Ensemble(torch.nn.Module):
         models_outputs = torch.concat([model(x).to(self.device)  for _, model in self.list_models], dim=1).to(device=self.device)
     
         if self.is_main_device:                
-            logger.debug(f"torch.stack(models_outputs).size(): {models_outputs.size()}") #convertir en debug
-            logger.debug(f"torch.stack(models_outputs): {models_outputs}")
+            logger.info(f"torch.concat(models_outputs).size(): {models_outputs.size()}") #convertir en debug
+            logger.debug(f"torch.concat(models_outputs): {models_outputs}")
 
         result = self.classifier(models_outputs).to(device=self.device)
 
         if self.is_main_device:             
-            logger.debug(f"result.size(): {result.size()}") # TODO: convertir en debug   
+            logger.info(f"result.size(): {result.size()}") # TODO: convertir en debug   
             logger.debug(f"result: {result}")            
     
         return result
