@@ -125,10 +125,10 @@ def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Ten
     # Se preparan los datos en el formato esperado para las métricas.
     addapted_output = list()
 
-    for ouput in outputs:        
+    for ouput in outputs:
         mod_ouput = [0] * num_classes
         # Al parecer, hay algún caso en el que se pasa a una clase inexistente
-        clase = ouput[0] if ouput[0] < num_classes else num_classes - 1
+        clase = ouput if ouput < num_classes else num_classes - 1
         mod_ouput[clase] = 1
         addapted_output.append(mod_ouput)
 
@@ -165,6 +165,9 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
             outputs = model(inputs)            
     
             outputs = outputs.to(device)
+            
+            if args[cons.IS_REGRESSION]:
+                outputs = outputs.reshape(labels.shape).to(device)
 
             if is_main_device:
                 logger.debug(f"{nombre_prueba} Outputs shape: {outputs.shape}, {nombre_prueba} Labels shape: {labels.shape}")

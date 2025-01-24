@@ -2,7 +2,7 @@ import torch
 
 import utils.model_related as mr
 from .log_writer import getLogWritter
-from .constants import MODEL_TYPE_REGRESSION, IS_REGRESSION
+from .constants import MODEL_TYPE_REGRESSION
 from .operations import normalize_tensor
 
 logger = getLogWritter(__name__)
@@ -32,7 +32,7 @@ class Ensemble(torch.nn.Module):
         self.num_outpus = num_outpus
         self.device = device
         self.types_models = types_models
-        self.regression_class_boundaries = regression_class_boundaries        
+        self.regression_class_boundaries = regression_class_boundaries
 
         self.list_model_names = [nombre for nombre,_ in list_models]
 
@@ -85,6 +85,9 @@ class Ensemble(torch.nn.Module):
             if self.types_models[i] == MODEL_TYPE_REGRESSION:
                 if self.is_main_device:
                     logger.debug(f"self.regression_class_boundaries[{i}] {self.regression_class_boundaries[i]}")
+
+                # Para que sea un vector de datos en vez de una matriz de vectores con un solo dato cada uno (y evitar un warning)
+                output = output.reshape(output.size(dim=0))
 
                 output = mr.from_regression_to_classification(outputs=output, boundaries=(self.regression_class_boundaries[i].to(device=self.device)), 
                                                               num_classes=self.num_outpus, device=self.device)
@@ -141,8 +144,7 @@ class Ensemble(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:   
         
         x = x.to(device=self.device, copy=True) # Por si acaso se modifica la entrada original, se copia (además de pasarla a la GPU)
-
         return (self._forward_no_classifier(x) if self.classifier is None 
-                else self._forward_with_classifier(x)).to(device=self.device)
+                else self._forward_with_classifier(x)).to(device=self.device).to(device=self.device)
     # -- End forward -- #
 # -- End Ensemble class -- #
