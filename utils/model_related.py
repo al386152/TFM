@@ -9,6 +9,8 @@ from .log_writer import getLogWritter
 from .ensemble import Ensemble
 from torch.nn.parallel import DistributedDataParallel
 
+import optuna
+
 logger = getLogWritter(__name__)
 
 # TODO: Hacer esto bien
@@ -138,7 +140,7 @@ def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Ten
 
 
 def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, 
-                   nombre_prueba:str="Test", metricas_regression:list=None):
+                   nombre_prueba:str="Test", metricas_regression:list=None, optuna_trial:optuna.Trial=None):
     
     if is_main_device:
         logger.debug(f"evaluate_model - inicio")
@@ -189,6 +191,14 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
                                                             num_classes=args[cons.NUMBER_CLASSES], device=device)
                 
             m.update_metrics(lista_metricas, outputs=outputs, labels=labels)
+
+        # Esto es solo para el tema de optuna #
+        if optuna_trial is not None:
+            optuna_trial.report(dict_resultados[cons.MAIN_METRIC], i)
+
+            if optuna_trial.should_prune():
+                raise optuna.exceptions.TrialPruned() 
+        # Fin del tema de optuna #
 
     if is_main_device:
         logger.debug(f"evaluate_model - get metrics")

@@ -98,7 +98,6 @@ SWITCH_MODELOS = {
 POSSIBLE_MODELS = SWITCH_MODELOS.keys()
 DEFAULT_MODEL_WEIGHTS = "IMAGENET1K_V1"
 
-#POSSIBLE_OPTIMIZERS = ["Adam", "AdamW", "SGD"]
 SWITCH_OPTIMIZERS = {
     "Adam": Adam,
     "AdamW": AdamW,
@@ -138,7 +137,7 @@ R2SCORE = "R2 Score"
 REGRESSION_MAIN_METRIC = MAE
 
 OPTUNA_SEED = 1234
-OPTUNA_NUMBER_TRIALS = 30
+OPTUNA_NUMBER_TRIALS = 336
 
 # Nota: el timeout tiene que ser el mismo para todos los hilos ==> uno acaba, el resto espera al que ha acabado ==> no se acaba nunca.
 #   Por otra parte, puesto que no sé bien cómo ponerlo, prefiero no ponerlo.

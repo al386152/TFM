@@ -13,7 +13,8 @@ from utils.log_writer import getLogWritter, set_level
 from utils.metrics import get_list_metrics, get_regression_list_metrics, logger as metrics_logger
 from utils.data_loaders import load_datasets, load_data_loaders, concat_datasets_and_get_proportion, load_data_loaders_inference, logger as dl_logger
 from utils.operations import setup_gpu
-from utils.optuna_related import main_optuna
+#from utils.optuna_related import main_optuna
+from utils.optuna_ensmeble import main_optuna
 from utils.ensemble import logger as ensemble_logger
 
 # Esto es para tener el logger
@@ -26,12 +27,7 @@ def main(args: dict):
     is_main_device = (args[cons.IS_DISTRIBUTED] and device == 0) or not args[cons.IS_DISTRIBUTED]
 
     if is_main_device:
-        logger.info(f"Device: {device}")
-
-    model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
-
-    if is_main_device:
-        logger.info(f"Model: {model}")    
+        logger.info(f"Device: {device}")    
 
     datasets = load_datasets(args, is_main_device)
     if is_main_device:
@@ -68,6 +64,19 @@ def main(args: dict):
 
     metricas = get_list_metrics(args[cons.NUMBER_CLASSES], device=device)
     metricas_regresion = get_regression_list_metrics(args[cons.NUMBER_CLASSES], device=device)
+
+    if args[cons.IS_HYPERTUNING]:
+        main_optuna(args=args, metricas=metricas, metricas_regresion=metricas_regresion, 
+                    data_loaders=data_loaders, proporcion_clases=proporcion_clases)
+                
+        return None
+        # Una vez se termina la búsqueda de hiperparámetros, se finaliza el programa.
+    # if args[cons.IS_HYPERTUNING]:
+
+    model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+
+    if is_main_device:
+        logger.info(f"Model: {model}")
 
     if not args[cons.INFERENCE]:
         # Si no es inferencia, es entrenamiento.
@@ -110,8 +119,9 @@ if __name__ == "__main__":
         lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger, ensemble_logger]
         set_level(lista_loggers, cons.loggin_level)
     
-    if args[cons.IS_HYPERTUNING]:
-        main_optuna(args)
-    else:
-        main(args)
+    main(args)
+    #if args[cons.IS_HYPERTUNING]:
+    #    main_optuna(args)
+    #else:
+    #    main(args)
 # -- Fin verdadero main -- #
