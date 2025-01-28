@@ -330,7 +330,8 @@ def check_and_set_regression_boundaries(args:dict):
             logger.error(texto)
         argparse.ArgumentError(None, texto)
     
-    # Vamos a comprobar que los límites estén bien.    
+    # Vamos a comprobar que los límites estén bien.
+    # list_regression_models[i][0]: Posición en la lista de modelos del <<Modelo número "i">>
     boundries = {list_regression_models[i][0]: 
                  _check_and_set_regression_boundaries(set_boundries=set_boundries[i], number_classes=args[cons.NUMBER_CLASSES]) 
                  for i in range(number_models)}
