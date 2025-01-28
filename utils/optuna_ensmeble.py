@@ -41,13 +41,14 @@ MAX_WEIGHT_VOTATION = 1
 
 # --- Fin Inicio constantes y variables globales --- #
 
-def _generate_path_weights(model_name:str, loss_name:str, extension:str, reg_boundaries:str, ruta_pesos:str)->str:
+def _generate_path_weights(model_name:str, loss_name:str, extension:str, reg_boundaries:str, ruta_pesos:str, is_main_device:bool)->str:
 
-    print(f"model_name: {model_name}")
-    print(f"loss_name: {loss_name}")
-    print(f"extension: {extension}")
-    print(f"reg_boundaries: {reg_boundaries}")
-    print(f"ruta_pesos: {ruta_pesos}")
+    if is_main_device:
+        logger.info(f"model_name: {model_name}")
+        logger.info(f"loss_name: {loss_name}")
+        logger.info(f"extension: {extension}")
+        logger.info(f"reg_boundaries: {reg_boundaries}")
+        logger.info(f"ruta_pesos: {ruta_pesos}")
 
     if reg_boundaries is None:
         output = os.path.join(ruta_pesos, "clasificacion")
@@ -64,7 +65,7 @@ def _generate_path_weights(model_name:str, loss_name:str, extension:str, reg_bou
 # --- End _generate_path_weights --- #
 
 # Para cada modelo, se genera la ruta a sus pesos y se guarda en una lista
-def generate_path_weights(models:list, list_losses:list, boundaries:dict, extension:str =".pth", ruta_pesos:str=RUTA_PESOS)->list:
+def generate_path_weights(models:list, list_losses:list, boundaries:dict, is_main_device:bool, extension:str =".pth", ruta_pesos:str=RUTA_PESOS)->list:
     
     #rutas_pesos = list()
     #for i in range(len(models)):
@@ -72,7 +73,8 @@ def generate_path_weights(models:list, list_losses:list, boundaries:dict, extens
 
     # TODO: |boundaries| <= |models| ==> Mirar si esto está mal (aunque boudnaries debería ser un diccionario)
 
-    return [_generate_path_weights(model_name=models[i], loss_name=list_losses[i], reg_boundaries=boundaries[i], extension=extension, ruta_pesos=ruta_pesos)
+    return [_generate_path_weights(model_name=models[i], loss_name=list_losses[i], reg_boundaries=boundaries[i], extension=extension, 
+                                   ruta_pesos=ruta_pesos, is_main_device=is_main_device)
             for i in range(len(models))]
 # -- generate_path_weights -- #
 
@@ -233,15 +235,12 @@ def objective(trial:optuna.Trial):
         args[cons.ENSEMBLE_VOTATION_WEIGHTS] = generate_votation_weights(num_clases=args[cons.NUMBER_CLASSES], min_value=MIN_WEIGHT_VOTATION, 
                                                                          max_value=MAX_WEIGHT_VOTATION, trial=trial, types_model=args[cons.ENSEMBLE_TYPE_MODEL],
                                                                          is_main_device=is_main_device)
-    else:
-        # Si se va a entrenar la capa de clasificación:
-        # TODO: Hacer las combinaciones de regresión y la pérdida para que no se ralle optuna.
-        index_reg_and_loss = trial.suggest_categorical("Regression classifier and Loss Function", range(len(COMBINACIONES_REGRESION_LOSS)))        
+    else: # Si se va a entrenar la capa de clasificación:
+        
+        # Esto es para impedir que optuna deje de funcionar:
+        index_reg_and_loss = trial.suggest_categorical("Regression classifier and Loss Function", range(len(COMBINACIONES_REGRESION_LOSS)))                
         args[cons.IS_REGRESSION], args[cons.LOSS_FUNCTION] = COMBINACIONES_REGRESION_LOSS[index_reg_and_loss]
         args[cons.OPTIMIZER] = trial.suggest_categorical("Optimizer", cons.SWITCH_OPTIMIZERS)
-
-        d_peso = generate_votation_weights(num_clases=args[cons.NUMBER_CLASSES], min_value=MIN_WEIGHT_VOTATION, max_value=MAX_WEIGHT_VOTATION, 
-                                           trial=trial, types_model=[cons.MODEL_TYPE_REGRESSION],is_main_device=is_main_device)
 
         args[cons.REGRESSION_CLASS_BOUNDARIES][cons.BOUNDARIES_ENSEMBLE_REGRESSION_CLASSIFIER] = _generate_votation_weights(num_clases=args[cons.NUMBER_CLASSES], min_value=MIN_WEIGHT_VOTATION, 
                                                                                                                             max_value=MAX_WEIGHT_VOTATION, trial=trial)
@@ -254,12 +253,10 @@ def objective(trial:optuna.Trial):
             logger.info(f"args[cons.OPTIMIZER]: {args[cons.OPTIMIZER]}")
     
     # Generamos el listado de pesos
-    args[cons.MODEL_WEIGHTS] = generate_path_weights(models=args[cons.MODEL],list_losses=loss_functions,boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES])
+    args[cons.MODEL_WEIGHTS] = generate_path_weights(models=args[cons.MODEL],list_losses=loss_functions,boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES], is_main_device=is_main_device)
 
     # Generamos el ensemble
     model = load_model(args=args, device=device, is_main_device=is_main_device)
-
-    print(f"SWITCH_LOSS_FUNCTIONS: {cons.SWITCH_LOSS_FUNCTIONS.keys()}") # TODO: Borrar
 
     if args[cons.INFERENCE]:
         evaluate_model(model=model, dataloader=data_loaders, device=device, 
