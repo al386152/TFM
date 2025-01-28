@@ -76,10 +76,10 @@ def generate_path_weights(models:list, list_losses:list, boundaries:dict, extens
             for i in range(len(models))]
 # -- generate_path_weights -- #
 
-def _generate_votation_weights(num_clases:int, min_value:int, max_value:int, trial: optuna.Trial)->torch.Tensor:
+def _generate_votation_weights(num_clases:int, min_value:float, max_value:float, trial: optuna.Trial)->torch.Tensor:
     votation_weights = torch.zeros(num_clases)
     for i in range(num_clases):
-        num_clases[i] = trial.suggest_float(f"votation_weight[{i}]", low= min_value, high= max_value)
+        votation_weights[i] = trial.suggest_float(f"votation_weight[{i}]", low= min_value, high= max_value)
 
     #return torch.Tensor([trial.suggest_float(f"votation_weight[{i}]", low= min_value, high= max_value) for i in range(num_clases)])
 
@@ -88,40 +88,36 @@ def _generate_votation_weights(num_clases:int, min_value:int, max_value:int, tri
     return votation_weights
 # -- Fin _generate_votation_weights -- #
 
-def generate_votation_weights(num_clases:int, min_value:int, max_value:int, trial: optuna.Trial, types_model:list)->torch.Tensor:
+def generate_votation_weights(num_clases:int, min_value:int, max_value:int, trial: optuna.Trial, types_model:list, is_main_device:bool)->torch.Tensor:
     
-    _types_model = list(filter(lambda x: x == cons.MODEL_TYPE_REGRESSION, types_model))
-    print(f"_types_model: {_types_model}") # TODO: Borrar
+    _types_model = list(filter(lambda x: x[1] == cons.MODEL_TYPE_REGRESSION, enumerate(types_model)))
+    if is_main_device:
+        logger.info(f"_types_model: {_types_model}") # TODO: Borrar
     dict_types_model = {
         index : _generate_votation_weights(num_clases, min_value, max_value, trial)
         for index, _ in _types_model
     }
-    print(f"dict_types_model: {dict_types_model}") # TODO: Borrar
+    if is_main_device:
+        logger.info(f"dict_types_model: {dict_types_model}") # TODO: Borrar
 
     return dict_types_model
 # -- Fin generate_votation_weights -- #
 
-def generate_list_possible_models(list_class_models:list=MODELOS_CLASIFICACION, list_reg_models:list=MODELOS_REGRESION, 
+def generate_list_possible_models(is_main_device:bool, list_class_models:list=MODELOS_CLASIFICACION, list_reg_models:list=MODELOS_REGRESION, 
                                   list_class_loss:list=CLASIFICATION_LOSS_FUNCTIONS, list_reg_loss:list=REGRESSION_LOSS_FUNCTIONS)-> list:
     
-    print(f"list_class_models: {list_class_models}")
-    print(f"list_class_loss: {list_class_loss}")
-    print(f"list_reg_models: {list_reg_models}")
-    print(f"list_reg_loss: {list_reg_loss}")
+    if is_main_device:
+        logger.info(f"list_class_models: {list_class_models}")
+        logger.info(f"list_class_loss: {list_class_loss}")
+        logger.info(f"list_reg_models: {list_reg_models}")
+        logger.info(f"list_reg_loss: {list_reg_loss}")
 
     class_models = [(model, loss, None) for model in list_class_models for loss in list_class_loss]
-    #reg_models = [(model, loss, boundary) for model in list_reg_models for loss in list_reg_loss for boundary in LIMITES_REGRESION]    
-    #reg_models = list()
-    #for model in list_reg_models:
-    #    for loss in list_reg_loss:
-    #        if not (model == "densenet169" and loss == "MSE"):
-    #            # La combinación "densenet169" y "MSE" no salió bien.
-    #            for boundary in LIMITES_REGRESION:
-    #                reg_models.append((model, loss, boundary))   
     reg_models = [(model, loss, boundary) for model in list_reg_models for loss in list_reg_loss if not (model == "densenet169" and loss == "MSE") for boundary in LIMITES_REGRESION]
-
-    print(f"class_models: {class_models}")
-    print(f"reg_models: {reg_models}")
+    
+    if is_main_device:
+        logger.info(f"class_models: {class_models}")
+        logger.info(f"reg_models: {reg_models}")
 
     return class_models + reg_models
 # -- Fin generate_list_possible_models -- #
@@ -235,7 +231,8 @@ def objective(trial:optuna.Trial):
     if args[cons.INFERENCE]:
         # Si se va a hacer una inferencia, se buscan los pesos de las votaciones para cada combinación:
         args[cons.ENSEMBLE_VOTATION_WEIGHTS] = generate_votation_weights(num_clases=args[cons.NUMBER_CLASSES], min_value=MIN_WEIGHT_VOTATION, 
-                                                                         max_value=MAX_WEIGHT_VOTATION, trial=trial, types_model=args[cons.ENSEMBLE_TYPE_MODEL])
+                                                                         max_value=MAX_WEIGHT_VOTATION, trial=trial, types_model=args[cons.ENSEMBLE_TYPE_MODEL],
+                                                                         is_main_device=is_main_device)
     else:
         # Si se va a entrenar la capa de clasificación:
         # TODO: Hacer las combinaciones de regresión y la pérdida para que no se ralle optuna.
@@ -243,13 +240,18 @@ def objective(trial:optuna.Trial):
         args[cons.IS_REGRESSION], args[cons.LOSS_FUNCTION] = COMBINACIONES_REGRESION_LOSS[index_reg_and_loss]
         args[cons.OPTIMIZER] = trial.suggest_categorical("Optimizer", cons.SWITCH_OPTIMIZERS)
 
+        d_peso = generate_votation_weights(num_clases=args[cons.NUMBER_CLASSES], min_value=MIN_WEIGHT_VOTATION, max_value=MAX_WEIGHT_VOTATION, 
+                                           trial=trial, types_model=[cons.MODEL_TYPE_REGRESSION],is_main_device=is_main_device)
+
+        args[cons.REGRESSION_CLASS_BOUNDARIES][cons.BOUNDARIES_ENSEMBLE_REGRESSION_CLASSIFIER] = _generate_votation_weights(num_clases=args[cons.NUMBER_CLASSES], min_value=MIN_WEIGHT_VOTATION, 
+                                                                                                                            max_value=MAX_WEIGHT_VOTATION, trial=trial)
+        
         if is_main_device:
+            logger.info(f"args[cons.REGRESSION_CLASS_BOUNDARIES][cons.BOUNDARIES_ENSEMBLE_REGRESSION_CLASSIFIER]: {args[cons.REGRESSION_CLASS_BOUNDARIES][cons.BOUNDARIES_ENSEMBLE_REGRESSION_CLASSIFIER]}")
             logger.info(f"COMBINACIONES_REGRESION_LOSS: {COMBINACIONES_REGRESION_LOSS}")
             logger.info(f"args[cons.IS_REGRESSION]: {args[cons.IS_REGRESSION]}")
             logger.info(f"args[cons.LOSS_FUNCTION]: {args[cons.LOSS_FUNCTION]}")
             logger.info(f"args[cons.OPTIMIZER]: {args[cons.OPTIMIZER]}")
-
-        if is_main_device: logger.info(f"Regression_classifier: {args[cons.IS_REGRESSION]}\nOptimizer: {args[cons.OPTIMIZER]}")    
     
     # Generamos el listado de pesos
     args[cons.MODEL_WEIGHTS] = generate_path_weights(models=args[cons.MODEL],list_losses=loss_functions,boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES])
@@ -284,7 +286,7 @@ def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:
 
     is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0) 
 
-    COMBINACIONES_MODELOS_POSIBLES = list(combinations(generate_list_possible_models(), MAX_MODELS))
+    COMBINACIONES_MODELOS_POSIBLES = list(combinations(generate_list_possible_models(is_main_device=is_main_device), MAX_MODELS))
     COMBINACIONES_REGRESION_LOSS = generate_combinations_regression_and_loss()
 
     if is_main_device:
