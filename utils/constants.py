@@ -138,6 +138,7 @@ REGRESSION_MAIN_METRIC = MAE
 
 OPTUNA_SEED = 1234
 OPTUNA_NUMBER_TRIALS = 336
+OPTUNA_DEVICES = "optuna_devices"
 
 # Nota: el timeout tiene que ser el mismo para todos los hilos ==> uno acaba, el resto espera al que ha acabado ==> no se acaba nunca.
 #   Por otra parte, puesto que no sé bien cómo ponerlo, prefiero no ponerlo.

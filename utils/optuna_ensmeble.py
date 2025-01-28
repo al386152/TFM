@@ -10,7 +10,7 @@ from utils.operations import GET_IMAGES_FOLDER_PATH
 from utils.log_writer import getLogWritter
 from utils.training import train_model
 from utils.model_related import evaluate_model, load_model
-from utils.operations import setup_gpu, cleanup
+from utils.operations import cleanup
 from utils.log_writer import getLogWritter, set_level, add_file_handler
 
 # --- Inicio constantes y variables globales --- #
@@ -21,9 +21,9 @@ LISTA_MODELOS_POSIBLES = None
 
 RUTA_PESOS = "/home/pluijter/proyecto/Ensemble_test/pesos"
 
-#MODELOS_CLASIFICACION = ["desnsenet169", "desnsenet121", "resnet50", "resnet152", "vgg19"]
-MODELOS_CLASIFICACION = ["desnsenet169", "resnet50"]
-MODELOS_REGRESION = ["desnsenet169", "resnet50"]
+#MODELOS_CLASIFICACION = ["densenet169", "desnsenet121", "resnet50", "resnet152", "vgg19"]
+MODELOS_CLASIFICACION = ["densenet169", "resnet50"]
+MODELOS_REGRESION = ["densenet169", "resnet50"]
 REGRESSION_LOSS_FUNCTIONS = ["MSE", "MAE"]
 CLASIFICATION_LOSS_FUNCTIONS = ["CrossEntropyLoss"]
 #MODELOS_REGRESION= ["0,1,2,3,4", "0.3,1.3,2.3,3.3,4","0.7,1.7,2.7,3.7,4", "0.7,1.7,2.5,3.5,4","0.8,1.8,2.3,3.3,4","0.8,1.8,2.8,3.3,4"]
@@ -41,6 +41,12 @@ MAX_WEIGHT_VOTATION = 1
 # --- Fin Inicio constantes y variables globales --- #
 
 def _generate_path_weights(model_name:str, loss_name:str, extension:str, reg_boundaries:str, ruta_pesos:str)->str:
+
+    print(f"model_name: {model_name}")
+    print(f"loss_name: {loss_name}")
+    print(f"extension: {extension}")
+    print(f"reg_boundaries: {reg_boundaries}")
+    print(f"ruta_pesos: {ruta_pesos}")
 
     if reg_boundaries is None:
         output = os.path.join(ruta_pesos, "clasificacion")
@@ -63,7 +69,7 @@ def generate_path_weights(models:list, list_losses:list, boundaries:list, extens
     #for i in range(len(models)):
     #    rutas_pesos.append() = _generate_path_weights(model_name=models[i], loss_name=list_losses, reg_boundaries=boundaries, extension=extension, ruta_pesos=ruta_pesos)
 
-    return [_generate_path_weights(model_name=models[i], loss_name=list_losses, reg_boundaries=boundaries, extension=extension, ruta_pesos=ruta_pesos)
+    return [_generate_path_weights(model_name=models[i], loss_name=list_losses[i], reg_boundaries=boundaries[i], extension=extension, ruta_pesos=ruta_pesos)
             for i in range(len(models))]
 # -- generate_path_weights -- #
 
@@ -95,32 +101,43 @@ def generate_votation_weights(num_clases:int, min_value:int, max_value:int, tria
 def generate_list_possible_models(list_class_models:list=MODELOS_CLASIFICACION, list_reg_models:list=MODELOS_REGRESION, 
                                   list_class_loss:list=CLASIFICATION_LOSS_FUNCTIONS, list_reg_loss:list=REGRESSION_LOSS_FUNCTIONS)-> list:
     
+    print(f"list_class_models: {list_class_models}")
+    print(f"list_class_loss: {list_class_loss}")
+    print(f"list_reg_models: {list_reg_models}")
+    print(f"list_reg_loss: {list_reg_loss}")
+
     class_models = [(model, loss, None) for model in list_class_models for loss in list_class_loss]
     #reg_models = [(model, loss, boundary) for model in list_reg_models for loss in list_reg_loss for boundary in LIMITES_REGRESION]    
     reg_models = list()
     for model in list_reg_models:
         for loss in list_reg_loss:
-            if not (model == "desnsenet169" and loss != "MSE"):
-                # La combinación "desnsenet169" y "MSE" no salió bien.
+            if not (model == "densenet169" and loss == "MSE"):
+                # La combinación "densenet169" y "MSE" no salió bien.
                 for boundary in LIMITES_REGRESION:
                     reg_models.append((model, loss, boundary))   
+
+    print(f"class_models: {class_models}")
+    print(f"reg_models: {reg_models}")
 
     return class_models + reg_models
 # -- Fin generate_list_possible_models -- #
 
 def _generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list, max_modelos:int)->list:
+    
     modelos_posibles = list_posible_models.copy()
     modelos_escogidos = list()
+    #for elem in modelos_posibles:
+    #    print(f"type: {type(elem)}|| elem: {elem}")
 
-    for _ in range(max_modelos):
-        modelo = trial.suggest_categorical("model, loss and boundaries", modelos_posibles)
+    for i in range(max_modelos):
+        modelo = trial.suggest_categorical(f"model, loss and boundaries - number: {i}", modelos_posibles)
         modelos_escogidos.append(modelo)
         modelos_posibles.remove(modelo)
     
     return modelos_escogidos
 # -- Fin _generate_list_models_ensemble -- #
 
-def generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list=LISTA_MODELOS_POSIBLES.copy(), max_modelos:int=MAX_MODELS)->tuple:
+def generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list=LISTA_MODELOS_POSIBLES, max_modelos:int=MAX_MODELS)->tuple:
     
     modelos_escogidos = _generate_list_models_ensemble(trial=trial, list_posible_models=list_posible_models, max_modelos=max_modelos)
 
@@ -128,18 +145,24 @@ def generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list=
     #tipos_modelos = [ (cons.MODEL_TYPE_REGRESSION if loss in REGRESSION_LOSS_FUNCTIONS else cons.MODEL_TYPE_CLASSIFIER) for _, loss, __ in modelos_escogidos]
     #boundaries = [ (limite if loss in REGRESSION_LOSS_FUNCTIONS else None) for _, loss, limite in modelos_escogidos]
     
-    modelos, tipos_modelos, boundaries = list(), list(), list()
+    modelos, tipos_modelos, boundaries, loss_functions = list(), list(), dict(), list()
     
+    # TODO: los boundaries no eran un diccionario ?? --> Revisarlo y corregirlo
+
+    i = 0
     for model, loss, limite in modelos_escogidos:
         modelos.append(model)
+        loss_functions.append(loss)
+
         if loss in REGRESSION_LOSS_FUNCTIONS:
             tipos_modelos.append(cons.MODEL_TYPE_REGRESSION)
-            boundaries.append(limite)
+            boundaries[i] = (limite)
         else:
             tipos_modelos.append(cons.MODEL_TYPE_CLASSIFIER)
-            
 
-    return (modelos, tipos_modelos, boundaries)
+        i += 1
+
+    return (modelos, tipos_modelos, boundaries, loss_functions)
 # -- Fin _generate_list_models_ensemble -- #
 
 def save_plot(name:str):
@@ -183,9 +206,11 @@ def show_and_save_results(study:optuna.Study, args:dict):
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_simple.py
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
 def objective(trial:optuna.Trial):
+    global ARGS, LISTA_MODELOS_POSIBLES
     args = ARGS
+    print(f"LISTA_MODELOS_POSIBLES [objective]: {LISTA_MODELOS_POSIBLES}")
 
-    device = args[cons.DEVICE]
+    device = args[cons.OPTUNA_DEVICES]
 
     if args[cons.IS_DISTRIBUTED]:
         # Nota: Al parecer, "TorchDistributedTrial" es experimental
@@ -202,7 +227,7 @@ def objective(trial:optuna.Trial):
     proporcion_clases = args[OPTUNA_PROPORCION_CLASES]
 
     # Listas de los modelos, tipos de modelos y los limites para la regresión seleccionados
-    args[cons.MODEL], args[cons.ENSEMBLE_TYPE_MODEL], args[cons.REGRESSION_CLASS_BOUNDARIES] = generate_list_models_ensemble(trial=trial)    
+    args[cons.MODEL], args[cons.ENSEMBLE_TYPE_MODEL], args[cons.REGRESSION_CLASS_BOUNDARIES], loss_functions = generate_list_models_ensemble(trial=trial, list_posible_models=LISTA_MODELOS_POSIBLES)    
     
 
     if args[cons.INFERENCE]:
@@ -212,13 +237,19 @@ def objective(trial:optuna.Trial):
     else:
         # Si se va a entrenar la capa de clasificación:
         args[cons.IS_REGRESSION] = trial.suggest_categorical("Regression_classifier", [True, False])        
-        args[cons.OPTIMIZER] = trial.suggest_categorical("Optimizer", REGRESSION_LOSS_FUNCTIONS if args[cons.IS_REGRESSION] 
-                                                         else CLASIFICATION_LOSS_FUNCTIONS)
+        args[cons.OPTIMIZER] = trial.suggest_categorical("Optimizer", cons.SWITCH_OPTIMIZERS)
+        args[cons.LOSS_FUNCTION] = trial.suggest_categorical("Loss Function", REGRESSION_LOSS_FUNCTIONS if args[cons.IS_REGRESSION] 
+                                                             else CLASIFICATION_LOSS_FUNCTIONS)
 
         if is_main_device: logger.info(f"Regression_classifier: {args[cons.IS_REGRESSION]}\nOptimizer: {args[cons.OPTIMIZER]}")    
     
+    # Generamos el listado de pesos
+    args[cons.MODEL_WEIGHTS] = generate_path_weights(models=args[cons.MODEL],list_losses=loss_functions,boundaries=args[cons.REGRESSION_CLASS_BOUNDARIES])
+
     # Generamos el ensemble
     model = load_model(args=args, device=device, is_main_device=is_main_device)
+
+    print(f"SWITCH_LOSS_FUNCTIONS: {cons.SWITCH_LOSS_FUNCTIONS.keys()}") # TODO: Borrar
 
     if args[cons.INFERENCE]:
         evaluate_model(model=model, dataloader=data_loaders, device=device, 
@@ -244,11 +275,12 @@ def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:
     args[OPTUNA_PROPORCION_CLASES] = proporcion_clases
 
     LISTA_MODELOS_POSIBLES = generate_list_possible_models()
+    print(f"LISTA_MODELOS_POSIBLES: {LISTA_MODELOS_POSIBLES}")
 
     is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0)   
 
-    device, _ = setup_gpu(args=args, logger=logger)            
-    args[cons.DEVICE] = device
+    #device, _ = setup_gpu(args=args, logger=logger)            
+    #args[cons.DEVICE] = device
     
     # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
     if is_main_device:

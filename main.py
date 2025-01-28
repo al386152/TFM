@@ -66,6 +66,7 @@ def main(args: dict):
     metricas_regresion = get_regression_list_metrics(args[cons.NUMBER_CLASSES], device=device)
 
     if args[cons.IS_HYPERTUNING]:
+        args[cons.OPTUNA_DEVICES] = device
         main_optuna(args=args, metricas=metricas, metricas_regresion=metricas_regresion, 
                     data_loaders=data_loaders, proporcion_clases=proporcion_clases)
                 
