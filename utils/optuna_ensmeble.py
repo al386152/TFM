@@ -19,6 +19,7 @@ logger = getLogWritter(__name__)
 
 ARGS = None
 COMBINACIONES_MODELOS_POSIBLES = None
+COMBINACIONES_REGRESION_LOSS = None
 RUTA_PESOS = "/home/pluijter/proyecto/Ensemble_test/pesos"
 
 #MODELOS_CLASIFICACION = ["densenet169", "desnsenet121", "resnet50", "resnet152", "vgg19"]
@@ -125,29 +126,6 @@ def generate_list_possible_models(list_class_models:list=MODELOS_CLASIFICACION, 
     return class_models + reg_models
 # -- Fin generate_list_possible_models -- #
 
-# Nota: No usar.
-# TODO: Borrar en un futuro (esta versión no funciona bien con optuna.)
-def _generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list, max_modelos:int, is_main_device:bool)->list:
-    
-    modelos_posibles = list_posible_models.copy()
-    modelos_escogidos = list()
-    #for elem in modelos_posibles:
-    #    print(f"type: {type(elem)}|| elem: {elem}")
-
-    if is_main_device:
-        logger.info(f"modelos_posibles: {modelos_posibles}")
-
-    for i in range(max_modelos):
-        # Parece que el tema es que a optuna no le gusta 
-        modelo = trial.suggest_categorical(f"model, loss and boundaries - number: {i}", modelos_posibles)
-        if is_main_device:
-            logger.info(f"modelo: {modelo}|")
-
-        modelos_escogidos.append(modelo)
-        modelos_posibles.remove(modelo)
-    
-    return modelos_escogidos
-# -- Fin _generate_list_models_ensemble -- #
 
 def generate_list_models_ensemble(trial: optuna.Trial, is_main_device:bool, list_posible_models:list=COMBINACIONES_MODELOS_POSIBLES)->tuple:
     
@@ -173,6 +151,15 @@ def generate_list_models_ensemble(trial: optuna.Trial, is_main_device:bool, list
     
     return (modelos, tipos_modelos, boundaries, loss_functions)
 # -- Fin _generate_list_models_ensemble -- #
+
+def generate_combinations_regression_and_loss(reg_loss_functions:list= REGRESSION_LOSS_FUNCTIONS, class_loss_function:list=CLASIFICATION_LOSS_FUNCTIONS)->list:
+
+    reg_comb = [ (True, elem) for elem in reg_loss_functions]
+    class_comb = [ (False, elem) for elem in class_loss_function]
+    
+    return reg_comb + class_comb
+
+# -- generate_combinations_regression_and_loss -- #
 
 def save_plot(name:str):
     
@@ -251,10 +238,16 @@ def objective(trial:optuna.Trial):
                                                                          max_value=MAX_WEIGHT_VOTATION, trial=trial, types_model=args[cons.ENSEMBLE_TYPE_MODEL])
     else:
         # Si se va a entrenar la capa de clasificación:
-        args[cons.IS_REGRESSION] = trial.suggest_categorical("Regression_classifier", [True, False])        
+        # TODO: Hacer las combinaciones de regresión y la pérdida para que no se ralle optuna.
+        index_reg_and_loss = trial.suggest_categorical("Regression classifier and Loss Function", range(len(COMBINACIONES_REGRESION_LOSS)))        
+        args[cons.IS_REGRESSION], args[cons.LOSS_FUNCTION] = COMBINACIONES_REGRESION_LOSS[index_reg_and_loss]
         args[cons.OPTIMIZER] = trial.suggest_categorical("Optimizer", cons.SWITCH_OPTIMIZERS)
-        args[cons.LOSS_FUNCTION] = trial.suggest_categorical("Loss Function", REGRESSION_LOSS_FUNCTIONS if args[cons.IS_REGRESSION] 
-                                                             else CLASIFICATION_LOSS_FUNCTIONS)
+
+        if is_main_device:
+            logger.info(f"COMBINACIONES_REGRESION_LOSS: {COMBINACIONES_REGRESION_LOSS}")
+            logger.info(f"args[cons.IS_REGRESSION]: {args[cons.IS_REGRESSION]}")
+            logger.info(f"args[cons.LOSS_FUNCTION]: {args[cons.LOSS_FUNCTION]}")
+            logger.info(f"args[cons.OPTIMIZER]: {args[cons.OPTIMIZER]}")
 
         if is_main_device: logger.info(f"Regression_classifier: {args[cons.IS_REGRESSION]}\nOptimizer: {args[cons.OPTIMIZER]}")    
     
@@ -281,7 +274,7 @@ def objective(trial:optuna.Trial):
 # Esta función se tiene que ejecutar antes de cargar los pesos (y después de lo de los datasets) en el main de verdad
 def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:dict, proporcion_clases:torch.Tensor):
                     
-    global ARGS, COMBINACIONES_MODELOS_POSIBLES
+    global ARGS, COMBINACIONES_MODELOS_POSIBLES, COMBINACIONES_REGRESION_LOSS
     ARGS = args
 
     args[OPTUNA_METRICAS] = metricas
@@ -292,6 +285,7 @@ def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:
     is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0) 
 
     COMBINACIONES_MODELOS_POSIBLES = list(combinations(generate_list_possible_models(), MAX_MODELS))
+    COMBINACIONES_REGRESION_LOSS = generate_combinations_regression_and_loss()
 
     if is_main_device:
         #logger.info(f"COMBINACIONES_MODELOS_POSIBLES: {COMBINACIONES_MODELOS_POSIBLES}")
