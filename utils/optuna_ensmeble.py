@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import torch
 import torch.distributed
+from itertools import combinations
 
 import utils.constants as cons
 from utils.operations import GET_IMAGES_FOLDER_PATH
@@ -17,8 +18,7 @@ from utils.log_writer import getLogWritter, set_level, add_file_handler
 logger = getLogWritter(__name__)
 
 ARGS = None
-LISTA_MODELOS_POSIBLES = None
-
+COMBINACIONES_MODELOS_POSIBLES = None
 RUTA_PESOS = "/home/pluijter/proyecto/Ensemble_test/pesos"
 
 #MODELOS_CLASIFICACION = ["densenet169", "desnsenet121", "resnet50", "resnet152", "vgg19"]
@@ -63,11 +63,13 @@ def _generate_path_weights(model_name:str, loss_name:str, extension:str, reg_bou
 # --- End _generate_path_weights --- #
 
 # Para cada modelo, se genera la ruta a sus pesos y se guarda en una lista
-def generate_path_weights(models:list, list_losses:list, boundaries:list, extension:str =".pth", ruta_pesos:str=RUTA_PESOS)->list:
+def generate_path_weights(models:list, list_losses:list, boundaries:dict, extension:str =".pth", ruta_pesos:str=RUTA_PESOS)->list:
     
     #rutas_pesos = list()
     #for i in range(len(models)):
     #    rutas_pesos.append() = _generate_path_weights(model_name=models[i], loss_name=list_losses, reg_boundaries=boundaries, extension=extension, ruta_pesos=ruta_pesos)
+
+    # TODO: |boundaries| <= |models| ==> Mirar si esto está mal (aunque boudnaries debería ser un diccionario)
 
     return [_generate_path_weights(model_name=models[i], loss_name=list_losses[i], reg_boundaries=boundaries[i], extension=extension, ruta_pesos=ruta_pesos)
             for i in range(len(models))]
@@ -108,13 +110,14 @@ def generate_list_possible_models(list_class_models:list=MODELOS_CLASIFICACION, 
 
     class_models = [(model, loss, None) for model in list_class_models for loss in list_class_loss]
     #reg_models = [(model, loss, boundary) for model in list_reg_models for loss in list_reg_loss for boundary in LIMITES_REGRESION]    
-    reg_models = list()
-    for model in list_reg_models:
-        for loss in list_reg_loss:
-            if not (model == "densenet169" and loss == "MSE"):
-                # La combinación "densenet169" y "MSE" no salió bien.
-                for boundary in LIMITES_REGRESION:
-                    reg_models.append((model, loss, boundary))   
+    #reg_models = list()
+    #for model in list_reg_models:
+    #    for loss in list_reg_loss:
+    #        if not (model == "densenet169" and loss == "MSE"):
+    #            # La combinación "densenet169" y "MSE" no salió bien.
+    #            for boundary in LIMITES_REGRESION:
+    #                reg_models.append((model, loss, boundary))   
+    reg_models = [(model, loss, boundary) for model in list_reg_models for loss in list_reg_loss if not (model == "densenet169" and loss == "MSE") for boundary in LIMITES_REGRESION]
 
     print(f"class_models: {class_models}")
     print(f"reg_models: {reg_models}")
@@ -122,46 +125,52 @@ def generate_list_possible_models(list_class_models:list=MODELOS_CLASIFICACION, 
     return class_models + reg_models
 # -- Fin generate_list_possible_models -- #
 
-def _generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list, max_modelos:int)->list:
+# Nota: No usar.
+# TODO: Borrar en un futuro (esta versión no funciona bien con optuna.)
+def _generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list, max_modelos:int, is_main_device:bool)->list:
     
     modelos_posibles = list_posible_models.copy()
     modelos_escogidos = list()
     #for elem in modelos_posibles:
     #    print(f"type: {type(elem)}|| elem: {elem}")
 
+    if is_main_device:
+        logger.info(f"modelos_posibles: {modelos_posibles}")
+
     for i in range(max_modelos):
+        # Parece que el tema es que a optuna no le gusta 
         modelo = trial.suggest_categorical(f"model, loss and boundaries - number: {i}", modelos_posibles)
+        if is_main_device:
+            logger.info(f"modelo: {modelo}|")
+
         modelos_escogidos.append(modelo)
         modelos_posibles.remove(modelo)
     
     return modelos_escogidos
 # -- Fin _generate_list_models_ensemble -- #
 
-def generate_list_models_ensemble(trial: optuna.Trial, list_posible_models:list=LISTA_MODELOS_POSIBLES, max_modelos:int=MAX_MODELS)->tuple:
+def generate_list_models_ensemble(trial: optuna.Trial, is_main_device:bool, list_posible_models:list=COMBINACIONES_MODELOS_POSIBLES)->tuple:
     
-    modelos_escogidos = _generate_list_models_ensemble(trial=trial, list_posible_models=list_posible_models, max_modelos=max_modelos)
-
-    #modelos = [model for model,_,__ in modelos_escogidos]
-    #tipos_modelos = [ (cons.MODEL_TYPE_REGRESSION if loss in REGRESSION_LOSS_FUNCTIONS else cons.MODEL_TYPE_CLASSIFIER) for _, loss, __ in modelos_escogidos]
-    #boundaries = [ (limite if loss in REGRESSION_LOSS_FUNCTIONS else None) for _, loss, limite in modelos_escogidos]
+    modelos_escogidos = list_posible_models[trial.suggest_categorical(f"Combination of models, losses and boundaries index", 
+                                                                                          range(len(list_posible_models)))]
+    
+    if is_main_device:
+        logger.info(f"modelos_escogidos: {modelos_escogidos}")
     
     modelos, tipos_modelos, boundaries, loss_functions = list(), list(), dict(), list()
     
-    # TODO: los boundaries no eran un diccionario ?? --> Revisarlo y corregirlo
-
     i = 0
     for model, loss, limite in modelos_escogidos:
         modelos.append(model)
-        loss_functions.append(loss)
-
+        loss_functions.append(loss) 
         if loss in REGRESSION_LOSS_FUNCTIONS:
             tipos_modelos.append(cons.MODEL_TYPE_REGRESSION)
-            boundaries[i] = (limite)
-        else:
-            tipos_modelos.append(cons.MODEL_TYPE_CLASSIFIER)
-
-        i += 1
-
+            boundaries[i] = limite
+        else:            
+            tipos_modelos.append(cons.MODEL_TYPE_CLASSIFIER)    
+            boundaries[i] = None
+        i += 1  
+    
     return (modelos, tipos_modelos, boundaries, loss_functions)
 # -- Fin _generate_list_models_ensemble -- #
 
@@ -206,9 +215,9 @@ def show_and_save_results(study:optuna.Study, args:dict):
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_simple.py
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
 def objective(trial:optuna.Trial):
-    global ARGS, LISTA_MODELOS_POSIBLES
+    
+    global ARGS, COMBINACIONES_MODELOS_POSIBLES
     args = ARGS
-    print(f"LISTA_MODELOS_POSIBLES [objective]: {LISTA_MODELOS_POSIBLES}")
 
     device = args[cons.OPTUNA_DEVICES]
 
@@ -226,9 +235,15 @@ def objective(trial:optuna.Trial):
     data_loaders = args[OPTUNA_DATA_LOADERS]
     proporcion_clases = args[OPTUNA_PROPORCION_CLASES]
 
-    # Listas de los modelos, tipos de modelos y los limites para la regresión seleccionados
-    args[cons.MODEL], args[cons.ENSEMBLE_TYPE_MODEL], args[cons.REGRESSION_CLASS_BOUNDARIES], loss_functions = generate_list_models_ensemble(trial=trial, list_posible_models=LISTA_MODELOS_POSIBLES)    
+    # Listas de los modelos, tipos de modelos y los limites para la regresión seleccionados (el "loss_functions es para el path de los pesos.")
+    args[cons.MODEL], args[cons.ENSEMBLE_TYPE_MODEL], args[cons.REGRESSION_CLASS_BOUNDARIES], loss_functions = generate_list_models_ensemble(trial=trial, is_main_device=is_main_device, list_posible_models=COMBINACIONES_MODELOS_POSIBLES)
     
+    if is_main_device:
+        logger.info(f"args[cons.MODEL]: {args[cons.MODEL]}")
+        logger.info(f"args[cons.ENSEMBLE_TYPE_MODEL]: {args[cons.ENSEMBLE_TYPE_MODEL]}")
+        logger.info(f"args[cons.REGRESSION_CLASS_BOUNDARIES]: {args[cons.REGRESSION_CLASS_BOUNDARIES]}")
+        logger.info(f"loss_functions: {loss_functions}")
+
 
     if args[cons.INFERENCE]:
         # Si se va a hacer una inferencia, se buscan los pesos de las votaciones para cada combinación:
@@ -266,7 +281,7 @@ def objective(trial:optuna.Trial):
 # Esta función se tiene que ejecutar antes de cargar los pesos (y después de lo de los datasets) en el main de verdad
 def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:dict, proporcion_clases:torch.Tensor):
                     
-    global ARGS, LISTA_MODELOS_POSIBLES
+    global ARGS, COMBINACIONES_MODELOS_POSIBLES
     ARGS = args
 
     args[OPTUNA_METRICAS] = metricas
@@ -274,10 +289,13 @@ def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:
     args[OPTUNA_DATA_LOADERS] = data_loaders
     args[OPTUNA_PROPORCION_CLASES] = proporcion_clases
 
-    LISTA_MODELOS_POSIBLES = generate_list_possible_models()
-    print(f"LISTA_MODELOS_POSIBLES: {LISTA_MODELOS_POSIBLES}")
+    is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0) 
 
-    is_main_device = ("LOCAL_RANK" not in os.environ) or (int(os.environ["LOCAL_RANK"]) == 0)   
+    COMBINACIONES_MODELOS_POSIBLES = list(combinations(generate_list_possible_models(), MAX_MODELS))
+
+    if is_main_device:
+        #logger.info(f"COMBINACIONES_MODELOS_POSIBLES: {COMBINACIONES_MODELOS_POSIBLES}")
+        logger.info(f"len(COMBINACIONES_MODELOS_POSIBLES): {len(COMBINACIONES_MODELOS_POSIBLES)}")
 
     #device, _ = setup_gpu(args=args, logger=logger)            
     #args[cons.DEVICE] = device
