@@ -45,7 +45,9 @@ def main(args: dict):
         if is_main_device:
             logger.info(f"proporcion_clases: {proporcion_clases}")
         proporcion_clases = tensor(list(proporcion_clases.values()))    
-        proporcion_clases = proporcion_clases.to(device)    
+        proporcion_clases = proporcion_clases.to(device)
+    else:
+        proporcion_clases = None    
 
     if not args[cons.INFERENCE]:
         if is_main_device:
