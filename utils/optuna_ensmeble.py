@@ -177,24 +177,24 @@ def show_and_save_results(study:optuna.Study, args:dict):
     
     # Plot history
     optuna.visualization.matplotlib.plot_optimization_history(study)
-    save_plot(args=args, name="Optimization_History")
+    save_plot(name="Optimization_History")
     optuna.visualization.matplotlib.plot_intermediate_values(study)
-    save_plot(args=args, name="Intermediate_Values")
+    save_plot(name="Intermediate_Values")
     optuna.visualization.matplotlib.plot_parallel_coordinate(study)
-    save_plot(args=args, name="Parallel_Coordinate")
+    save_plot(name="Parallel_Coordinate")
     optuna.visualization.matplotlib.plot_contour(study)
-    save_plot(args=args, name="Contour")
+    save_plot(name="Contour")
     optuna.visualization.matplotlib.plot_slice(study)
-    save_plot(args=args, name="Slice")
+    save_plot(name="Slice")
     optuna.visualization.matplotlib.plot_param_importances(study)
-    save_plot(args=args, name="Hyperparameters_Importances")
+    save_plot(name="Hyperparameters_Importances")
     optuna.visualization.matplotlib.plot_edf(study)
-    save_plot(args=args, name="Empirical Distribution Function")
+    save_plot(name="Empirical Distribution Function")
     # Nota: Al parecer, "plot_rank" es experimental
     optuna.visualization.matplotlib.plot_rank(study)
-    save_plot(args=args, name="Rank")
+    save_plot(name="Rank")
     optuna.visualization.matplotlib.plot_timeline(study)
-    save_plot(args=args, name="Time_Plot")
+    save_plot(name="Time_Plot")
 # -- FIN save_plot -- #
 
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_simple.py
@@ -259,14 +259,16 @@ def objective(trial:optuna.Trial):
     model = load_model(args=args, device=device, is_main_device=is_main_device)
 
     if args[cons.INFERENCE]:
-        evaluate_model(model=model, dataloader=data_loaders, device=device, 
+        results = evaluate_model(model=model, dataloader=data_loaders, device=device, 
                        is_main_device=is_main_device, lista_metricas=metricas, 
                        args=args, metricas_regression=metricas_regresion)
     else:
-        train_model(args=args, model=model, dataloaders=data_loaders,
+        results = train_model(args=args, model=model, dataloaders=data_loaders,
                     is_main_device=is_main_device, device=device, lista_metricas=metricas, 
                     proporcion_clases=proporcion_clases, metricas_regresion=metricas_regresion, 
                     optuna_trial=trial)
+    
+    return results[cons.MAIN_METRIC]
 # -- Fin objective -- #
 
 

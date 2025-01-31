@@ -227,5 +227,6 @@ def train_model(args: dict, model: torch.nn.Module, dataloaders:torch.utils.data
     
     if is_main_device:
         logger.info(('-' * cons.NUM_GUIONES) + " Training ended " + ('-' * cons.NUM_GUIONES))
-
+    
+    return dict_resultados
 # -- Fin train_model -- #
