@@ -66,13 +66,6 @@ def _generate_path_weights(model_name:str, loss_name:str, extension:str, reg_bou
 
 # Para cada modelo, se genera la ruta a sus pesos y se guarda en una lista
 def generate_path_weights(models:list, list_losses:list, boundaries:dict, is_main_device:bool, extension:str =".pth", ruta_pesos:str=RUTA_PESOS)->list:
-    
-    #rutas_pesos = list()
-    #for i in range(len(models)):
-    #    rutas_pesos.append() = _generate_path_weights(model_name=models[i], loss_name=list_losses, reg_boundaries=boundaries, extension=extension, ruta_pesos=ruta_pesos)
-
-    # TODO: |boundaries| <= |models| ==> Mirar si esto está mal (aunque boudnaries debería ser un diccionario)
-
     return [_generate_path_weights(model_name=models[i], loss_name=list_losses[i], reg_boundaries=boundaries[i], extension=extension, 
                                    ruta_pesos=ruta_pesos, is_main_device=is_main_device)
             for i in range(len(models))]
@@ -271,6 +264,18 @@ def objective(trial:optuna.Trial):
     return results[cons.MAIN_METRIC]
 # -- Fin objective -- #
 
+# Temas:
+#   - AMBOS:
+#       - Listado de modelos
+#           -> Hay 5 modelos de clasificación.
+#           -> Hay "3" modelos de regresión (densenetMAE y Resnet{MAE, MSE}), pero con 6 combinaciones de límites ==> 18
+#           -> Una época tarda 0,5 horas en entrenarse (aprox) ==> Si entrenamos 5 épocas: 2,5 horas por combinación.
+#       
+#   - POR PESOS:  
+#       - Cambio de pesos de la votación <= Esto no es un problema, hay muchas combinaciones pero las inferencias duran un minuto
+#   
+#   - POR "CLASIFICADOR":
+#       - Probar por clasificación y regresión (y ambas funciones de pérdida) ==> *3 el número de pruebas.
 
 # Esta función se tiene que ejecutar antes de cargar los pesos (y después de lo de los datasets) en el main de verdad
 def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:dict, proporcion_clases:torch.Tensor):
@@ -289,12 +294,9 @@ def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:
     COMBINACIONES_REGRESION_LOSS = generate_combinations_regression_and_loss()
 
     if is_main_device:
-        #logger.info(f"COMBINACIONES_MODELOS_POSIBLES: {COMBINACIONES_MODELOS_POSIBLES}")
+        logger.debug(f"COMBINACIONES_MODELOS_POSIBLES: {COMBINACIONES_MODELOS_POSIBLES}")
         logger.info(f"len(COMBINACIONES_MODELOS_POSIBLES): {len(COMBINACIONES_MODELOS_POSIBLES)}")
 
-    #device, _ = setup_gpu(args=args, logger=logger)            
-    #args[cons.DEVICE] = device
-    
     # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
     if is_main_device:
         study = optuna.create_study(
@@ -331,17 +333,3 @@ def main_optuna(args:dict, metricas:list, metricas_regresion:list, data_loaders:
             logger.debug("- cleanup -")        
         cleanup()
 # -- Fin main_optuna -- #
-
-# TODO: 
-#   - AMBOS:
-#       - Listado de modelos
-#           -> Hay 5 modelos de clasificación.
-#           -> Hay "3" modelos de regresión (densenetMAE y Resnet{MAE, MSE}), pero con 6 combinaciones de límites ==> 18
-#           -> Una época tarda 0,5 horas en entrenarse (aprox) ==> Si entrenamos 5 épocas: 2,5 horas por combinación.
-#       
-#   - POR PESOS:  
-#       - Cambio de pesos de la votación <= Esto no es un problema, hay muchas combinaciones pero las inferencias duran un minuto
-#   
-#   - POR "CLASIFICADOR":
-#       - Probar por clasificación y regresión (y ambas funciones de pérdida) ==> *3 el número de pruebas.
-
