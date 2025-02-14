@@ -142,6 +142,9 @@ def get_args_parser():
     parser.add_argument(f"--{cons.ENSEMBLE_CREATE_CLASSIFIER}", action='store_true', default=False,
                         help="Create a classifier layer instead of using votation weights for ensemble models")
 
+    parser.add_argument(f"--{cons.ENSEMBLE_CLASSIFIER_WEIGHTS}", default=None, type=str,
+                        help=f"Ensemble's classifier layer's weights path.")
+
     return parser
 # -- Fin get_args_parser -- #
 

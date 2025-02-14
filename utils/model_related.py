@@ -110,13 +110,12 @@ def fine_tuning(model, model_name, outputs, is_main_device):
 
 def saving_the_model(args: dict, model: torch.nn.Module):
     # Esta función se tiene que ejecutar solo en un único hilo.
-    model_name = OUTPUT_MODEL_NAME(name=args[cons.MODEL], number_clases=args[cons.NUMBER_CLASSES], 
+    model_name = OUTPUT_MODEL_NAME(name=cons.CONNECTOR_NAME_OUTPUT.join(args[cons.MODEL]), number_clases=args[cons.NUMBER_CLASSES], 
                                    is_regression=args[cons.IS_REGRESSION])    
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
     torch.save(model.module.state_dict() if args[cons.IS_DISTRIBUTED] else model.state_dict(),
                model_name)
 # -- Fin saving_the_model -- #
-
 
 def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Tensor, num_classes:int, device):
 
@@ -228,7 +227,7 @@ def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: li
     return dict_resultados
 # -- Fin evaluate_model -- #
 
-def load_model_weights(args: dict, model_name: str, model: torch.nn.Module, device:torch.device,  model_weights_path:str, is_main_device:bool):
+def load_model_weights(args: dict, model: torch.nn.Module, device:torch.device,  model_weights_path:str, is_main_device:bool):
     if is_main_device:
             logger.info(f"----load_model_weights----")
             logger.debug(f"model_weights_path: {model_weights_path}\n ----")
@@ -296,7 +295,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
             if is_main_device:
                 logger.info("Tratando de cargar los pesos en el modelo base")
             if model_weights_path:
-                load_model_weights(args=args, model_name=model_name, model=model, 
+                load_model_weights(args=args, model=model, 
                                 device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
                                 model_weights_path=model_weights_path[i], is_main_device=is_main_device)
             pesos_por_cargar = False
@@ -313,7 +312,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
             model = DistributedDataParallel(model, device_ids=[device])
         
         if model_weights_path and pesos_por_cargar:
-            load_model_weights(args=args, model_name=model_name, model=model, 
+            load_model_weights(args=args, model=model, 
                                device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
                                model_weights_path=model_weights_path[i], is_main_device=is_main_device)
             
@@ -329,12 +328,40 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
                          num_classes=args[cons.NUMBER_CLASSES],
                          is_main_device=is_main_device, device=device)
         
+        # - Intentando cargar los pesos de la capa de clasificación sin ser "DistributedDataParallel" - #
+        try:
+            pesos_por_cargar = False                
+            if args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS] is not None:
+            # Cargando los pesos de la capa de clasificación
+                if is_main_device:
+                    logger.info(f"Cargando los pesos para el clasificador:\n{args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS]}")
+                load_model_weights(args=args, model=model, 
+                        device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
+                        model_weights_path=args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS], is_main_device=is_main_device)        
+        except:
+            if is_main_device:
+                logger.info(f"Los pesos no se han cargado en el modelo base ==> se intentarán cargar como DistributedDataParallel")
+            pesos_por_cargar = True
+            # NOTE: Esto no es muy elegante, pero es más sencillo que hacer una búsqueda por todas las claves del diccionario de pesos y ver si tienen "module."
+
+        # - Haciéndolo distribuido "DistributedDataParallel" - #
         if args[cons.IS_DISTRIBUTED]:
             if is_main_device:
                 logger.info(f"DistributedDataParallel")
             model = DistributedDataParallel(model, device_ids=[device])
+
+        # - Cargando los pesos de la capa de clasificación como "DistributedDataParallel" - #
+        if pesos_por_cargar and args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS]:
+            if is_main_device:
+                    logger.info(f"Cargando los pesos para el clasificador como \'DistributedDataParallel\': {args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS]}")
+            load_model_weights(args=args, model=model, 
+                        device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
+                        model_weights_path=args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS], is_main_device=is_main_device)        
+
+        
+
     else:
-        _, model = list_models[0]
+        _, model = list_models[0]    
 
     return model
 # -- Fin load_model -- #
