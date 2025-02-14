@@ -1,4 +1,4 @@
-from torchvision.models import vgg19, resnet50, resnet152, densenet121, densenet169
+from torchvision.models import vgg19, resnet50, resnet152, densenet121, densenet169, densenet201
 from torch.nn import MSELoss, L1Loss, CrossEntropyLoss
 from torch.optim import SGD, Adam, AdamW
 from logging import _levelToName, INFO
@@ -95,7 +95,8 @@ SWITCH_MODELOS = {
     "resnet50": resnet50,
     "resnet152": resnet152,
     "densenet121": densenet121,
-    "densenet169": densenet169
+    "densenet169": densenet169, 
+    "densenet201": densenet201
 }
 
 POSSIBLE_MODELS = SWITCH_MODELOS.keys()

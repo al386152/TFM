@@ -6,10 +6,10 @@ import torch.utils
 
 import utils.constants as cons
 
-fecha = datetime.now().replace(microsecond=0)
+FECHA = datetime.now().replace(microsecond=0)
 
 def OUTPUT_MODEL_NAME(name:str, number_clases:int, is_regression:bool)->str:
-    return f"{'regression_' if is_regression else 'classifier_'}model_{name}_{number_clases}_outputs_{fecha}.pth"
+    return f"{'regression_' if is_regression else 'classifier_'}model_{name}_{number_clases}_outputs_{FECHA}.pth"
 # -- Fin OUTPUT_MODEL_NAME -- #
 
 # Se asume que la lista no está vacía
@@ -106,11 +106,11 @@ def GET_IMAGES_FOLDER_PATH():
 # -- Fin GET_IMAGES_FOLDER_PATH -- #
 
 def GET_FECHA_INICIO_EJECUCION_CON_FORMATO():    
-    return str(fecha.replace(microsecond=0)).replace(':', '-').replace(' ', '_')
+    return str(FECHA.replace(microsecond=0)).replace(':', '-').replace(' ', '_')
 # -- Fin GET_FECHA_INICIO_EJECUCION_CON_FORMATO -- #
 
 def GET_FECHA_INICIO_EJECUCION():
-    return fecha
+    return FECHA
 # -- Fin GET_FECHA_INICIO_EJECUCION -- #
 
 # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_spawn.py
