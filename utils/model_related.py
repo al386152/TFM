@@ -62,7 +62,7 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1, is_m
 # -- Fin transfer_learning -- #
 
 def get_classifier_layer(model: torch.nn.Module, model_name: str, is_main_device: bool=False)->torch.nn.modules.linear.Linear:
-    #print(f"model_name: {model_name}")
+    print(f"model_name: {model_name}")
     if is_main_device: 
             logger.info(f"model_name: {model_name}")
     if "vgg" in model_name:
@@ -72,6 +72,10 @@ def get_classifier_layer(model: torch.nn.Module, model_name: str, is_main_device
         classifier_layer = model.fc
     elif "densenet" in model_name:
         classifier_layer = model.classifier
+    elif "alexnet" in model_name:
+        classifier_layer = model.classifier[6]
+    elif "googlenet" in model_name:
+        classifier_layer = model.fc
     else:        
         if is_main_device: 
             logger.warning(f"Han habido varias comprobaciones antes, ¿cómo has llegado aquí?. 'model_name: {model_name}'")
@@ -103,6 +107,10 @@ def fine_tuning(model, model_name, outputs, is_main_device):
         model.fc = capa_clasificacion
     elif "densenet" in model_name:
         model.classifier = capa_clasificacion
+    elif "alexnet" in model_name:
+        model.classifier[6] = capa_clasificacion
+    elif "googlenet" in model_name:
+        model.fc = capa_clasificacion
     # else: No se debería dar el caso
 
     return model
@@ -357,8 +365,6 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
             load_model_weights(args=args, model=model, 
                         device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
                         model_weights_path=args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS], is_main_device=is_main_device)        
-
-        
 
     else:
         _, model = list_models[0]    
