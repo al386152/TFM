@@ -353,7 +353,7 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
             # NOTE: Esto no es muy elegante, pero es más sencillo que hacer una búsqueda por todas las claves del diccionario de pesos y ver si tienen "module."
 
         # - Haciéndolo distribuido "DistributedDataParallel" - #
-        if args[cons.IS_DISTRIBUTED]:
+        if args[cons.IS_DISTRIBUTED] and args[cons.ENSEMBLE_CREATE_CLASSIFIER]:
             if is_main_device:
                 logger.info(f"DistributedDataParallel")
             model = DistributedDataParallel(model, device_ids=[device])
