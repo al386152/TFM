@@ -62,7 +62,6 @@ def transfer_learning(model:torch.nn.Module, capas_entrenar_final:int = -1, is_m
 # -- Fin transfer_learning -- #
 
 def get_classifier_layer(model: torch.nn.Module, model_name: str, is_main_device: bool=False)->torch.nn.modules.linear.Linear:
-    print(f"model_name: {model_name}")
     if is_main_device: 
             logger.info(f"model_name: {model_name}")
     if "vgg" in model_name:
@@ -248,7 +247,13 @@ def load_model_weights(args: dict, model: torch.nn.Module, device:torch.device, 
     if is_main_device:
         logger.debug(f"state_dict:\n{state_dict.keys()}")    
 
-    model.load_state_dict(state_dict, strict=True)
+    # TODO: probar esto.
+    # NOTE: GoogLeNet genera 2 capas auxiliares, parece que estas no se guardan del todo ==>
+    # Hay que probar si, esto es lo normal o solo un fallo de la última ejecución y, si es necesario, guardar (y cargar) todo el modelo en vez de los pesos.
+    if isinstance(model, cons.SWITCH_MODELOS["googlenet"]):
+        model.load_state_dict(state_dict, strict=False)
+    else:
+        model.load_state_dict(state_dict, strict=True)
 # -- Fin load_model_weights -- #
 
 def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True) -> torch.nn.Module:
@@ -309,9 +314,10 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
             pesos_por_cargar = False
             if is_main_device:
                 logger.info("Pesos cargados en el modelo base")
-        except:
+        except RuntimeError as e:
             if is_main_device:
                 logger.info("Los pesos no se han cargado en el modelo base ==> se intentarán cargar como DistributedDataParallel")
+                logger.info(e) # TODO: Cambiar a debug
             pesos_por_cargar = True
         
         if args[cons.IS_DISTRIBUTED]:
@@ -346,10 +352,10 @@ def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True
                 load_model_weights(args=args, model=model, 
                         device=(torch.cuda.device(device) if "cuda" in args[cons.DEVICE] else torch.device("cpu")),
                         model_weights_path=args[cons.ENSEMBLE_CLASSIFIER_WEIGHTS], is_main_device=is_main_device)        
-        except:
+        except RuntimeError as e:
             if is_main_device:
-                logger.info(f"Los pesos no se han cargado en el modelo base ==> se intentarán cargar como DistributedDataParallel")
-            pesos_por_cargar = True
+                logger.info("Los pesos no se han cargado en el modelo base ==> se intentarán cargar como DistributedDataParallel")
+                logger.info(e) # TODO: Cambiar a debug
             # NOTE: Esto no es muy elegante, pero es más sencillo que hacer una búsqueda por todas las claves del diccionario de pesos y ver si tienen "module."
 
         # - Haciéndolo distribuido "DistributedDataParallel" - #
