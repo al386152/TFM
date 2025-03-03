@@ -22,7 +22,7 @@ from utils.operations import setup_gpu, cleanup
 
 logger = getLogWritter(__name__)
 ARGS = None
-
+MODEL = "model"
 
 def save_plot(args:dict, name:str):
     
@@ -146,10 +146,14 @@ def objective(trial:optuna.Trial):
     datasets = load_datasets(args, is_main_device)
 
     # Selección de los hiperparámetros de Optuna
-    args[cons.MODEL] = trial.suggest_categorical("model", cons.POSSIBLE_MODELS)
-    model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+    #args[cons.MODEL] = trial.suggest_categorical("model", cons.POSSIBLE_MODELS)
+    #model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+    model, weights = args[MODEL]
+    if is_main_device: logger.info(f"loading: {model}")    
+    model.load_state_dict(weights)
     
-    modify_model_layers(model=model, model_name=args[cons.MODEL], trial=trial)
+
+    #modify_model_layers(model=model, model_name=args[cons.MODEL], trial=trial)
     if is_main_device: logger.info(f"Model: {model}")    
 
     modify_transformations(datasets, trial)
@@ -180,7 +184,7 @@ def objective(trial:optuna.Trial):
         if is_main_device: logger.info(f"Epoch: {epoch + 1}/{num_epochs}")
 
         model.train(True)
-        train_one_epoch(model=model, device=device, training_loader=data_loaders[cons.TRAIN_FOLDER_NAME],
+        train_one_epoch(args=args,model=model, device=device, training_loader=data_loaders[cons.TRAIN_FOLDER_NAME],
                         loss_func=loss_func, optimizer=optimizer, estimacion_duracion=("", ""), 
                         is_main_device=is_main_device, debuging=args[cons.SHOW_DEBUG_OUTPUTS])
 
@@ -209,7 +213,13 @@ def main_optuna(args:dict):
     # Cambio importante respecto de la versión normal
     device, _ = setup_gpu(args=args, logger=logger)            
     args[cons.DEVICE] = device
-    
+    args[cons.MODEL] = ["googlenet"]
+    model = mr.load_model(args=args, device=device, is_main_device=is_main_device)
+    weights = model.state_dict()
+    from copy import deepcopy
+
+    args[MODEL] = (model, deepcopy(weights))
+
     # https://github.com/optuna/optuna-examples/blob/main/pytorch/pytorch_distributed_simple.py
     if is_main_device:
         study = optuna.create_study(
@@ -222,7 +232,7 @@ def main_optuna(args:dict):
 
         # Para que la salida de optuna se guarde en el log.
         add_file_handler(loggers = [optuna.logging.get_logger("optuna")])
-        set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level)  
+        set_level(loggers = [optuna.logging.get_logger("optuna")], level = cons.loggin_level) 
 
         study.optimize(objective, n_trials = cons.OPTUNA_NUMBER_TRIALS)
 

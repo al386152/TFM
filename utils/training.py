@@ -192,8 +192,7 @@ def train_model(args: dict, model: torch.nn.Module, dataloaders:torch.utils.data
                 model_name = f"{'regression' if args[cons.IS_REGRESSION] else 'classifier'}_{args[cons.MODEL]}_{args[cons.NUMBER_CLASSES]}_{timestamp}.pth"
                 model_path = os.path.join(args[cons.PARTIAL_MODELS_PATH], 
                                         model_name) 
-
-                torch.save(model.state_dict(), model_path)
+                torch.save(model.module.state_dict() if args[cons.IS_DISTRIBUTED] else model.state_dict(), model_path)
 
         # Esto es solo para el tema de optuna #
         if optuna_trial is not None:
