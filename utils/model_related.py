@@ -121,7 +121,6 @@ def fine_tuning(model, model_name, outputs, is_main_device):
 
 def saving_the_model(args: dict, model: Union[torch.nn.Module, DistributedDataParallel]) -> None:
     # Esta función se tiene que ejecutar solo en un único hilo.
-    print(f"args[cons.SAVE_MODEL_WEIGHTS]: {args[cons.SAVE_MODEL_WEIGHTS]}")
     model_name = OUTPUT_MODEL_NAME(name=cons.CONNECTOR_NAME_OUTPUT.join(args[cons.MODEL]), number_clases=args[cons.NUMBER_CLASSES], 
                                    is_regression=args[cons.IS_REGRESSION], save_model_and_weights=args[cons.SAVE_MODEL_WEIGHTS])        
 
@@ -279,7 +278,6 @@ def load_model_and_weights(args: dict, device: torch.device, is_main_device:bool
     if args[cons.IS_DISTRIBUTED]:
         if is_main_device:
             logger.info(f"DistributedDataParallel")
-        print(f"is_main_device: {is_main_device}, device:{device}")
         model = DistributedDataParallel(model, device_ids=[device])
     # else: model = model            
 
