@@ -8,8 +8,8 @@ import utils.constants as cons
 
 FECHA = datetime.now().replace(microsecond=0)
 
-def OUTPUT_MODEL_NAME(name:str, number_clases:int, is_regression:bool)->str:
-    return f"{'regression_' if is_regression else 'classifier_'}model_{name}_{number_clases}_outputs_{FECHA}.pth"
+def OUTPUT_MODEL_NAME(name:str, number_clases:int, is_regression:bool, save_model_and_weights:bool = False)->str:
+    return f"{'regression_' if is_regression else 'classifier_'}{'model_and_' if save_model_and_weights else ''}weighs_{name}_{number_clases}_outputs_{FECHA}.pth"
 # -- Fin OUTPUT_MODEL_NAME -- #
 
 # Se asume que la lista no está vacía

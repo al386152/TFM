@@ -9,6 +9,10 @@ from .log_writer import getLogWritter
 from .ensemble import Ensemble
 from torch.nn.parallel import DistributedDataParallel
 
+from torchvision.models import GoogLeNet
+
+from typing import Union
+
 import optuna
 
 logger = getLogWritter(__name__)
@@ -115,13 +119,19 @@ def fine_tuning(model, model_name, outputs, is_main_device):
     return model
 # -- Fin fine_tuning -- #
 
-def saving_the_model(args: dict, model: torch.nn.Module):
+def saving_the_model(args: dict, model: Union[torch.nn.Module, DistributedDataParallel]) -> None:
     # Esta función se tiene que ejecutar solo en un único hilo.
+    print(f"args[cons.SAVE_MODEL_WEIGHTS]: {args[cons.SAVE_MODEL_WEIGHTS]}")
     model_name = OUTPUT_MODEL_NAME(name=cons.CONNECTOR_NAME_OUTPUT.join(args[cons.MODEL]), number_clases=args[cons.NUMBER_CLASSES], 
-                                   is_regression=args[cons.IS_REGRESSION])    
+                                   is_regression=args[cons.IS_REGRESSION], save_model_and_weights=args[cons.SAVE_MODEL_WEIGHTS])        
+
+    if args[cons.SAVE_MODEL_WEIGHTS]:
+        to_save = model.module if args[cons.IS_DISTRIBUTED] else model        
+    else:
+        to_save = model.module.state_dict() if args[cons.IS_DISTRIBUTED] else model.state_dict()
+
+    torch.save(to_save, model_name)
     logger.info(f"Guardado el modelo con el nombre: {model_name}")
-    torch.save(model.module.state_dict() if args[cons.IS_DISTRIBUTED] else model.state_dict(),
-               model_name)
 # -- Fin saving_the_model -- #
 
 def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Tensor, num_classes:int, device):
@@ -242,21 +252,44 @@ def load_model_weights(args: dict, model: torch.nn.Module, device:torch.device, 
             logger.debug(f"type(device): {type(device)}")
             logger.debug(f"module.state_dict():\n{model.state_dict().keys()}")
 
-    state_dict = torch.load(f=model_weights_path, weights_only=args[cons.INFERENCE])#,
-                            #map_location=device)
+    state_dict = torch.load(f=model_weights_path, weights_only=args[cons.INFERENCE], 
+                            map_location=torch.device(device))
     if is_main_device:
         logger.debug(f"state_dict:\n{state_dict.keys()}")    
 
     # TODO: probar esto.
     # NOTE: GoogLeNet genera 2 capas auxiliares, parece que estas no se guardan del todo ==>
     # Hay que probar si, esto es lo normal o solo un fallo de la última ejecución y, si es necesario, guardar (y cargar) todo el modelo en vez de los pesos.
-    if isinstance(model, cons.SWITCH_MODELOS["googlenet"]):
+    
+    if isinstance(model, GoogLeNet):
+        if is_main_device:
+            logger.warning("It is possible that GoogLeNet auxiliar block are not loaded.")
         model.load_state_dict(state_dict, strict=False)
     else:
         model.load_state_dict(state_dict, strict=True)
 # -- Fin load_model_weights -- #
 
-def load_model(args: dict, device, is_main_device:bool, fine__tuning:bool = True) -> torch.nn.Module:
+def load_model_and_weights(args: dict, device: torch.device, is_main_device:bool) -> torch.nn.Module:
+
+    if is_main_device:
+        logger.info(f"load_model_and_weights. {args[cons.MODEL_WEIGHTS_PATH]}")
+
+    model = torch.load(f=args[cons.MODEL_WEIGHTS_PATH], weights_only=False, map_location=torch.device(device))
+
+    if args[cons.IS_DISTRIBUTED]:
+        if is_main_device:
+            logger.info(f"DistributedDataParallel")
+        print(f"is_main_device: {is_main_device}, device:{device}")
+        model = DistributedDataParallel(model, device_ids=[device])
+    # else: model = model            
+
+    return model
+# --- END load_model_and_weights --- #
+
+def load_model(args: dict, device: torch.device, is_main_device:bool, fine__tuning:bool = True) -> torch.nn.Module:
+
+    if args[cons.MODEL_WEIGHTS_PATH] is not None:
+        return load_model_and_weights(args, device, is_main_device)
 
     model = None
     model_names = args[cons.MODEL]

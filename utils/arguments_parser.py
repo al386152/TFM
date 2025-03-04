@@ -144,6 +144,12 @@ def get_args_parser():
 
     parser.add_argument(f"--{cons.ENSEMBLE_CLASSIFIER_WEIGHTS}", default=None, type=str,
                         help=f"Ensemble's classifier layer's weights path.")
+    
+    parser.add_argument(f"--{cons.SAVE_MODEL_WEIGHTS}", action='store_true', default=False,
+                        help=f"Save both the model and weights.")
+    
+    parser.add_argument(f"--{cons.MODEL_WEIGHTS_PATH}", default=None, type=str,
+                        help=f"Model's weights path.")
 
     return parser
 # -- Fin get_args_parser -- #
