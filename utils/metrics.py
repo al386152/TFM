@@ -35,7 +35,7 @@ def get_regression_list_metrics(num_outputs:int, device):
             #(cons.R2SCORE, R2Score(num_outputs = num_outputs)),
             ]
     
-    # Moviéndo las métricas al dispositivo que toca.
+    # Moviendo las métricas al dispositivo que toca.
     for _, metrica in lista_metricas:
         metrica.to(device)
 
