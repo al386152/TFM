@@ -150,6 +150,9 @@ def get_args_parser():
     
     parser.add_argument(f"--{cons.MODEL_WEIGHTS_PATH}", default=None, type=str,
                         help=f"Model's weights path.")
+    
+    parser.add_argument(f"--{cons.USE_GUI}", default=False, action='store_true',
+                        help="Activate to make inferences with GUI")
 
     return parser
 # -- Fin get_args_parser -- #

@@ -45,6 +45,7 @@ ENSEMBLE_CREATE_CLASSIFIER = "create_ensemble_classifier"
 ENSEMBLE_CLASSIFIER_WEIGHTS = "ensemble_classifier_weights"
 SAVE_MODEL_WEIGHTS = "save_model_and_weights"
 MODEL_WEIGHTS_PATH = "pth_model_and_weights"
+USE_GUI = "USE_GUI"
 
 TEST_DATA_PATH = "test_path"
 TRAIN_DATA_PATH = "train_path"

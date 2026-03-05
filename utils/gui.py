@@ -2,13 +2,14 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 from PIL import ImageTk, Image
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, Future
 
 import torch.nn as nn
 
 DEFAULT_BASE_NAME = "Dectector de RetinopatÍA - CNN" #"RetCNN"
 DEFAULT_IMAGE_TEXT = "RETINOPATHY DEGREE:"
 DEFAULT_IMAGE_STATE = f"{DEFAULT_IMAGE_TEXT} Retinography not processed."
-DEFAULT_IMAGE_TEXT = "Processing: "
+DETECTION_IN_PROGRESS_TEXT = "Detection in progress"
 IMAGE_SIZE = (400, 400)
 WINDOW_SIZE = (IMAGE_SIZE[0] + 100, IMAGE_SIZE[1] + 200)
 
@@ -35,7 +36,7 @@ class Tab(ttk.Frame):
         self.img = ImageTk.PhotoImage(img)
 
         self.img_label = tk.Label(self, image = self.img)
-        self.img_label.pack(side="top")
+        self.img_label.pack(side="top", expand=True)
 
         self.text_state = tk.Label(self, text = DEFAULT_IMAGE_STATE)
         self.text_state.pack(side="bottom")
@@ -47,7 +48,7 @@ class Tab(ttk.Frame):
 
         def _processing_images(_files = file, tab = self):
             files = [(_files, tab)]
-            processing_images(list_images=files)
+            processing_images(list_images=files, the_gui=the_gui, thread_pool=self.the_gui.thread_pool)
 
         self.process_button = tk.Button(self, text ='Process retinography', command = _processing_images)
         self.process_button.pack(side="bottom")
@@ -58,33 +59,47 @@ class Tab(ttk.Frame):
 
 class TheGUI(tk.Frame):
 
-    def __init__(self, model: nn.Module, master=None):
+    def __init__(self, model: nn.Module, thread_pool: ThreadPoolExecutor, master=None):
         super().__init__(master)
         self.pack()
         self.cnn_model = model
-        self.files: dict[str, Tab] = dict()
+        self.button_remove_all: tk.Button
+        self.button_process_all: tk.Button
+        self.button_open: tk.Button
 
+        self.files: dict[str, Tab] = dict()
+        self.thread_pool: ThreadPoolExecutor = thread_pool
         self.main_tab = ttk.Notebook(self)
 
-        def _processing_images(files = self.files):
-            processing_images(files)
+        def _processing_images(files = self.files, the_gui=self, _thread_pool=self.thread_pool):
+            _files = list(files.items())
+            processing_images(_files, the_gui=the_gui, thread_pool=_thread_pool)
 
-        self.button_remove_all = tk.Button(self, text ='Process all retinographies', command = _processing_images)
-        self.button_remove_all.pack(side="bottom", expand=False)
+        self.button_process_all = tk.Button(self, text ='Process all retinographies', command = _processing_images, state="disabled")
+        self.button_process_all.pack(side="bottom", expand=False)
 
         self.button_remove_all = tk.Button(self, text ='Remove all retinographies', command = self.close_files, state="disabled")
         self.button_remove_all.pack(side="bottom", expand=False)
 
-        button_open = tk.Button(self, text ='Add retinographies', command = self.open_images)
-        button_open.pack(side="bottom", expand=False)
+        self.button_open = tk.Button(self, text ='Add retinographies', command = self.open_images)
+        self.button_open.pack(side="bottom", expand=False)
     # ----
 
 
-    def enable_remove_all_button(self):
-        if len(self.files.keys()) == 0:
-            self.button_remove_all["state"] = "disabled"
+    def enable_remove_process_all_buttons(self, force_disable=False, force_enable=False):
+        if force_disable:
+            self.button_remove_all.config(state="disabled")
+            self.button_process_all.config(state="disabled")
+        elif force_enable:
+            self.button_remove_all.config(state="active")
+            self.button_process_all.config(state="active")
+
+        elif len(self.files.keys()) == 0:
+            self.button_remove_all.config(state="disabled")
+            self.button_process_all.config(state="disabled")
         else:
-            self.button_remove_all["state"] = "active"
+            self.button_remove_all.config(state="active")
+            self.button_process_all.config(state="active")
 
     def open_images(self):
         files = filedialog.askopenfilenames()
@@ -92,8 +107,8 @@ class TheGUI(tk.Frame):
             if file not in self.files:
                 Tab(self.main_tab, self, file)
 
-        self.enable_remove_all_button()
-        self.main_tab.pack(side="top")
+        self.enable_remove_process_all_buttons()
+        self.main_tab.pack(side="top", expand=True)
     # ----
 
     def close_files(self):
@@ -112,7 +127,7 @@ class TheGUI(tk.Frame):
         tab.forget()
         tab.destroy()
         self.main_tab.pack(side="top")
-        self.enable_remove_all_button()
+        self.enable_remove_process_all_buttons()
 
 
 ########################################################################################################
@@ -124,30 +139,61 @@ class TheGUI(tk.Frame):
 import time
 
 def doing_the_inference():
-    # NOTE: Parece que tengo que lanzar esto en un hilo a parte
+    # NOTE: Parece que tengo que lanzar esto en un hilo a part
     time.sleep(2)
     print(f"doing_the_inference")
 
 def intializing_dataset():
     print(f"intializing_dataset")
 
-def processing_images(list_images: list[tuple[str, Tab]]):
-    print(f"processing_images -> {str([img[0] for img in list_images])}")
-    
-    # TODO: [mirar de cómo hacer esto]
-
-    # Blocking the "process" and "delete" button.
-    for _, tab in list_images:
-        tab.remove_button["state"] = "disabled"
-        tab.process_button["state"] = "disabled"
-    
+def doing_everything():
     intializing_dataset()
     doing_the_inference()
+    return random.random()
+
+import random
+
+def processing_images(list_images: list[tuple[str, Tab]], the_gui: TheGUI, thread_pool: ThreadPoolExecutor):
+    print(f"processing_images -> {str([img[0] for img in list_images])}")
+
+    print(f"list_images:\n{list_images}")
+
+    def activate_buttons(resultado_procesamiento):
+        print("activate_buttons started")
+        for _, tab in list_images:
+            # TODO: BORRAR
+            resultado_procesamiento = resultado_procesamiento * random.random() # TODO: BORRAR
+            # TODO: BORRAR (anterior)
+            tab.remove_button.config(state = "active")
+            tab.process_button.config(state = "active")
+            tab.text_state.config(text= f"{DEFAULT_IMAGE_TEXT}{resultado_procesamiento} PATATA")
+        
+        the_gui.enable_remove_process_all_buttons()
+        the_gui.button_open.config(state="active")
+
+        print("activate_buttons finished")
+
+    def at_end_processing(promesa: Future) -> None:
+        print("at_end_processing started")
+        resultado_procesamiento = promesa.result()
+        # Unlocking the "process" and "delete" button.
+        the_gui.after(0, activate_buttons, resultado_procesamiento)
+
+
+    the_gui.enable_remove_process_all_buttons(force_disable=True)
+    the_gui.button_open.config(state="disabled")
     
-    # Unlocking the "process" and "delete" button.
+    # Blocking the "process" and "delete" button.
+    print(f"{type(list_images)=} || {len(list_images)} || {list_images=}")
     for _, tab in list_images:
-        tab.remove_button["state"] = "active"
-        tab.process_button["state"] = "active"
+        print(f"{tab=} || {tab.remove_button=} || {tab.process_button=}")
+        tab.remove_button.config(state = "disabled")
+        tab.process_button.config(state = "disabled")
+        tab.text_state.config(text=f"{DETECTION_IN_PROGRESS_TEXT}")
+
+    future_promesa = thread_pool.submit(doing_everything)
+    
+    future_promesa.add_done_callback(at_end_processing)
 
 
 def initialize_model() -> nn.Module:
@@ -157,11 +203,13 @@ def initialize_model() -> nn.Module:
 
 def startGui():
     model = initialize_model()
-    root = TheGUI(model)
+    thread_pool = ThreadPoolExecutor(max_workers = 1)
+    root = TheGUI(model, thread_pool)
     root.master.title(DEFAULT_BASE_NAME)
     root.master.minsize(*WINDOW_SIZE)
     #root.master.maxsize(600, 700)
     root.mainloop()
+    thread_pool.shutdown()
 # ----
 
 

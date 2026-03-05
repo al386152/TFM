@@ -17,6 +17,8 @@ from utils.optuna_related import main_optuna
 #from utils.optuna_ensmeble import main_optuna
 from utils.ensemble import logger as ensemble_logger
 
+from utils.gui import startGui
+
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
 
@@ -122,9 +124,12 @@ if __name__ == "__main__":
         lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger, ensemble_logger]
         set_level(lista_loggers, cons.loggin_level)
     
-    #main(args)
-    if args[cons.IS_HYPERTUNING]:
-        main_optuna(args)
+    if args[cons.USE_GUI]:
+        startGui()
     else:
-        main(args)
+        #main(args)
+        if args[cons.IS_HYPERTUNING]:
+            main_optuna(args)
+        else:
+            main(args)
 # -- Fin verdadero main -- #
