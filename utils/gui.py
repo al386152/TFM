@@ -144,7 +144,7 @@ class TheGUI(tk.Frame):
 ########################################################################################################
 ########################################################################################################
 
-def inference(model: nn.Module, dataloader: torch.utils.data.DataLoader, device: torch.device = torch.device("cpu")) -> list[torch.Tensor]:
+def inference(model: nn.Module, dataloader: torch.utils.data.DataLoader, device: torch.device = torch.device("cpu")) -> torch.Tensor:
     print(f"doing_the_inference")
     num_elementos = len(dataloader)
 
@@ -168,7 +168,7 @@ def inference(model: nn.Module, dataloader: torch.utils.data.DataLoader, device:
 def intializing_dataset(data: list[tuple[str, Tab]]) -> torch.utils.data.DataLoader:
     print(f"intializing_dataset")
 
-    _data = [(pil_to_tensor(tab.pil_img)).float() for _, tab in data]
+    _data = [((pil_to_tensor(tab.pil_img)).float() / 255.0) for _, tab in data]
     print(f"{_data=}")
     tensor_data: torch.Tensor = torch.stack(_data)
     print(f"{tensor_data.shape=}")
@@ -198,10 +198,15 @@ def processing_images(list_images: list[tuple[str, Tab]], the_gui: TheGUI, threa
     def activate_buttons(resultado_procesamiento):
         print(f"{len(resultado_procesamiento)=} || {len(list_images)=}")
         print("activate_buttons started")
+        grado_rd = torch.argmax(resultado_procesamiento, dim=1)
+        print(f"{len(grado_rd)=} || {grado_rd.shape=} || {len(list_images)=} || {resultado_procesamiento=}")
+
         for i, (_, tab) in enumerate(list_images):
             tab.remove_button.config(state = "active")
             tab.process_button.config(state = "active")
-            tab.text_state.config(text= f"{DEFAULT_IMAGE_TEXT}{resultado_procesamiento[i]}")
+            print(f"{i} || {int(grado_rd[i])=} || {cons.RETINOPATHY_NUMBER_TO_GRADE[int(grado_rd[i])]=}")
+            tab.text_state.config(text= f"{DEFAULT_IMAGE_TEXT} {cons.RETINOPATHY_NUMBER_TO_GRADE[int(grado_rd[i])]} detected. {100*resultado_procesamiento[i][grado_rd[i]]:.2f} %")
+        
         
         the_gui.enable_remove_process_all_buttons()
         the_gui.button_open.config(state="active")
@@ -235,16 +240,28 @@ def processing_images(list_images: list[tuple[str, Tab]], the_gui: TheGUI, threa
 
 
 def initialize_model(args: dict) -> nn.Module:
+
+    class Model (nn.Module):
+        def __init__(self, base_model, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            self.base_model = base_model
+            self.softmax = torch.nn.Softmax()
+        
+        def forward(self, x) -> torch.Tensor:
+            x = self.base_model(x)
+            x = self.softmax(x)
+            return x
+
     print("Initializing the model")
     model = mr.load_model(args, torch.device("cpu"), True, False)
     if isinstance(model, OrderedDict):
-        weights = model
+        weights = OrderedDict({key[len("module."):]: value for key, value in model.items()})
         model: torch.nn.Module = cons.SWITCH_MODELOS[args[cons.MODEL]](**{"num_classes": 5})
         print(f"{weights.keys()=}")
         model.load_state_dict(weights)
 
     print(f"Model initalized:\n{model}\n==========")
-    return model
+    return Model(model)
 
 def startGui(args):
 

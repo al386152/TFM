@@ -149,6 +149,14 @@ OPTUNA_SEED = 1234
 OPTUNA_NUMBER_TRIALS = 40
 OPTUNA_DEVICES = "optuna_devices"
 
+RETINOPATHY_NUMBER_TO_GRADE = {
+    0: "No DR",
+    1: "Mild Nonproliferative DR",
+    2: "Moderate Nonproliferative DR",
+    3: "Severe Nonproliferative DR",
+    4: "Proliferative DR",
+}
+
 # Nota: el timeout tiene que ser el mismo para todos los hilos ==> uno acaba, el resto espera al que ha acabado ==> no se acaba nunca.
 #   Por otra parte, puesto que no sé bien cómo ponerlo, prefiero no ponerlo.
 #OPTUNA_TIMEOUT = None #60 * 5 # Es en segundos (None: todo el tiempo que necesite)
