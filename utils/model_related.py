@@ -13,7 +13,7 @@ from torchvision.models import GoogLeNet
 
 from typing import Union
 
-import optuna
+#import optuna
 
 logger = getLogWritter(__name__)
 
@@ -155,7 +155,7 @@ def from_regression_to_classification(outputs:torch.Tensor, boundaries:torch.Ten
 
 
 def evaluate_model(model, dataloader, device, is_main_device, lista_metricas: list, args, loss_fn=None, save_confusion_matrix:bool=True, 
-                   nombre_prueba:str="Test", metricas_regression:list=None, optuna_trial:optuna.Trial=None):
+                   nombre_prueba:str="Test", metricas_regression:list=None, optuna_trial:"optuna.Trial"=None):
     
     if is_main_device:
         logger.debug(f"evaluate_model - inicio")

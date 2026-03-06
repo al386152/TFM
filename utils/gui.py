@@ -4,13 +4,19 @@ from PIL import ImageTk, Image
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, Future
 
+import torch
 import torch.nn as nn
+
+import utils.model_related as mr
+import utils.constants as cons
+from torchvision.transforms.functional import pil_to_tensor
+from collections import OrderedDict
 
 DEFAULT_BASE_NAME = "Dectector de RetinopatÍA - CNN" #"RetCNN"
 DEFAULT_IMAGE_TEXT = "RETINOPATHY DEGREE:"
 DEFAULT_IMAGE_STATE = f"{DEFAULT_IMAGE_TEXT} Retinography not processed."
 DETECTION_IN_PROGRESS_TEXT = "Detection in progress"
-IMAGE_SIZE = (400, 400)
+IMAGE_SIZE = (524, 524)
 WINDOW_SIZE = (IMAGE_SIZE[0] + 100, IMAGE_SIZE[1] + 200)
 
 
@@ -31,9 +37,9 @@ class Tab(ttk.Frame):
         self.remove_button: tk.Button
         self.process_button: tk.Button
 
-        img = Image.open(file)
-        img = img.resize(IMAGE_SIZE, Image.LANCZOS)
-        self.img = ImageTk.PhotoImage(img)
+        self.pil_img = Image.open(file).convert("RGB")
+        self.pil_img = self.pil_img.resize(IMAGE_SIZE, Image.LANCZOS)
+        self.img = ImageTk.PhotoImage(self.pil_img)
 
         self.img_label = tk.Label(self, image = self.img)
         self.img_label.pack(side="top", expand=True)
@@ -48,7 +54,9 @@ class Tab(ttk.Frame):
 
         def _processing_images(_files = file, tab = self):
             files = [(_files, tab)]
-            processing_images(list_images=files, the_gui=the_gui, thread_pool=self.the_gui.thread_pool)
+            processing_images(list_images=files, the_gui=the_gui,
+                              thread_pool=self.the_gui.thread_pool,
+                              args=self.the_gui.args)
 
         self.process_button = tk.Button(self, text ='Process retinography', command = _processing_images)
         self.process_button.pack(side="bottom")
@@ -59,10 +67,11 @@ class Tab(ttk.Frame):
 
 class TheGUI(tk.Frame):
 
-    def __init__(self, model: nn.Module, thread_pool: ThreadPoolExecutor, master=None):
+    def __init__(self, model: nn.Module, thread_pool: ThreadPoolExecutor, args: dict, master=None):
         super().__init__(master)
         self.pack()
-        self.cnn_model = model
+        self.args = args
+        self.model = model
         self.button_remove_all: tk.Button
         self.button_process_all: tk.Button
         self.button_open: tk.Button
@@ -71,9 +80,9 @@ class TheGUI(tk.Frame):
         self.thread_pool: ThreadPoolExecutor = thread_pool
         self.main_tab = ttk.Notebook(self)
 
-        def _processing_images(files = self.files, the_gui=self, _thread_pool=self.thread_pool):
+        def _processing_images(files = self.files, the_gui=self, _thread_pool=self.thread_pool, args = self.args):
             _files = list(files.items())
-            processing_images(_files, the_gui=the_gui, thread_pool=_thread_pool)
+            processing_images(_files, the_gui=the_gui, thread_pool=_thread_pool, args=args)
 
         self.button_process_all = tk.Button(self, text ='Process all retinographies', command = _processing_images, state="disabled")
         self.button_process_all.pack(side="bottom", expand=False)
@@ -135,50 +144,79 @@ class TheGUI(tk.Frame):
 ########################################################################################################
 ########################################################################################################
 
-# TODO: REMOVE
-import time
-
-def doing_the_inference():
-    # NOTE: Parece que tengo que lanzar esto en un hilo a part
-    time.sleep(2)
+def inference(model: nn.Module, dataloader: torch.utils.data.DataLoader, device: torch.device = torch.device("cpu")) -> list[torch.Tensor]:
     print(f"doing_the_inference")
+    num_elementos = len(dataloader)
 
-def intializing_dataset():
+    print(f"{type(model)=}")
+    #print(f"{model=}")
+
+    model.eval()
+
+    with torch.no_grad():
+        for i, (inputs, ) in enumerate(dataloader):
+            print(f"Processing element: [{i+1}/{num_elementos}]")
+            print(f"{inputs.shape=}")
+            inputs: torch.Tensor
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            print(f"Element {i}: {outputs.shape=}")
+    return outputs
+# ------
+
+
+def intializing_dataset(data: list[tuple[str, Tab]]) -> torch.utils.data.DataLoader:
     print(f"intializing_dataset")
 
-def doing_everything():
-    intializing_dataset()
-    doing_the_inference()
-    return random.random()
+    _data = [(pil_to_tensor(tab.pil_img)).float() for _, tab in data]
+    print(f"{_data=}")
+    tensor_data: torch.Tensor = torch.stack(_data)
+    print(f"{tensor_data.shape=}")
+    dataset = torch.utils.data.TensorDataset(tensor_data)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=len(data))
 
-import random
+    return dataloader
+    # --
 
-def processing_images(list_images: list[tuple[str, Tab]], the_gui: TheGUI, thread_pool: ThreadPoolExecutor):
+
+def do_the_inference(model: nn.Module, data: list):
+    print(f"{model=}\ndata:{data=}")
+    try:
+        dataloader = intializing_dataset(data)
+        print(f"dataset initialized")
+        outputs = inference(model, dataloader)
+    except Exception as e:
+        from traceback import print_exception
+        print_exception(e)
+    return outputs
+
+def processing_images(list_images: list[tuple[str, Tab]], the_gui: TheGUI, thread_pool: ThreadPoolExecutor, args: dict):
     print(f"processing_images -> {str([img[0] for img in list_images])}")
 
     print(f"list_images:\n{list_images}")
 
     def activate_buttons(resultado_procesamiento):
+        print(f"{len(resultado_procesamiento)=} || {len(list_images)=}")
         print("activate_buttons started")
-        for _, tab in list_images:
-            # TODO: BORRAR
-            resultado_procesamiento = resultado_procesamiento * random.random() # TODO: BORRAR
-            # TODO: BORRAR (anterior)
+        for i, (_, tab) in enumerate(list_images):
             tab.remove_button.config(state = "active")
             tab.process_button.config(state = "active")
-            tab.text_state.config(text= f"{DEFAULT_IMAGE_TEXT}{resultado_procesamiento} PATATA")
+            tab.text_state.config(text= f"{DEFAULT_IMAGE_TEXT}{resultado_procesamiento[i]}")
         
         the_gui.enable_remove_process_all_buttons()
         the_gui.button_open.config(state="active")
-
         print("activate_buttons finished")
+    # ----
+
+    def _do_inference(model = the_gui.model, _list_images = list_images):
+        return do_the_inference(model, _list_images)
 
     def at_end_processing(promesa: Future) -> None:
         print("at_end_processing started")
         resultado_procesamiento = promesa.result()
         # Unlocking the "process" and "delete" button.
         the_gui.after(0, activate_buttons, resultado_procesamiento)
-
+    # ----
 
     the_gui.enable_remove_process_all_buttons(force_disable=True)
     the_gui.button_open.config(state="disabled")
@@ -191,20 +229,35 @@ def processing_images(list_images: list[tuple[str, Tab]], the_gui: TheGUI, threa
         tab.process_button.config(state = "disabled")
         tab.text_state.config(text=f"{DETECTION_IN_PROGRESS_TEXT}")
 
-    future_promesa = thread_pool.submit(doing_everything)
+    future_promesa = thread_pool.submit(_do_inference)
     
     future_promesa.add_done_callback(at_end_processing)
 
 
-def initialize_model() -> nn.Module:
+def initialize_model(args: dict) -> nn.Module:
     print("Initializing the model")
-    # TODO Hacer que se cargue y se inicialice el modelo.
-    return nn.Module()
+    model = mr.load_model(args, torch.device("cpu"), True, False)
+    if isinstance(model, OrderedDict):
+        weights = model
+        model: torch.nn.Module = cons.SWITCH_MODELOS[args[cons.MODEL]](**{"num_classes": 5})
+        print(f"{weights.keys()=}")
+        model.load_state_dict(weights)
 
-def startGui():
-    model = initialize_model()
+    print(f"Model initalized:\n{model}\n==========")
+    return model
+
+def startGui(args):
+
+    args = test_args = {
+        cons.MODEL: "densenet169",
+        cons.BATCH_SIZE: 1,
+        cons.MODEL_WEIGHTS_PATH: "/home/usuario/Documentos/Resultados/pesos/clasificacion/model_densenet169.pth",
+        cons.IS_DISTRIBUTED: False
+    }
+
+    model = initialize_model(args)
     thread_pool = ThreadPoolExecutor(max_workers = 1)
-    root = TheGUI(model, thread_pool)
+    root = TheGUI(model, thread_pool, args)
     root.master.title(DEFAULT_BASE_NAME)
     root.master.minsize(*WINDOW_SIZE)
     #root.master.maxsize(600, 700)
@@ -213,5 +266,13 @@ def startGui():
 # ----
 
 
+def main():
+    test_args = {
+        cons.MODEL: "densenet169",
+        cons.BATCH_SIZE: 1,
+        cons.MODEL_WEIGHTS_PATH: "/home/usuario/Documentos/Resultados/pesos/clasificacion/model_densenet169.pth"
+    }
+    startGui(test_args)
+
 if __name__ == "__main__":
-    startGui()
+    main()

@@ -12,7 +12,7 @@ import utils.constants as cons
 from utils.operations import GET_TIME_HMS_FORMAT, MEAN_TIMES, MULTIPLY_TIME
 from utils.log_writer import getLogWritter
 from utils.model_related import evaluate_model
-import optuna 
+#import optuna 
 
 logger = getLogWritter(__name__)
 
@@ -112,7 +112,7 @@ def train_one_epoch(args:dict, model:torch.nn.Module, training_loader:list, devi
 def train_model(args: dict, model: torch.nn.Module, dataloaders:torch.utils.data.DataLoader, 
                 is_main_device:bool, device: torch.device, lista_metricas:list, 
                 proporcion_clases:list=None, metricas_regresion:list=None, 
-                optuna_trial:optuna.Trial=None):
+                optuna_trial:"optuna.Trial"=None):
     
     if is_main_device:
         logger.info( ('-' * cons.NUM_GUIONES) + "Starting to train the model" + ('-' * cons.NUM_GUIONES) )

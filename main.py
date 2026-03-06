@@ -13,11 +13,11 @@ from utils.log_writer import getLogWritter, set_level
 from utils.metrics import get_list_metrics, get_regression_list_metrics, logger as metrics_logger
 from utils.data_loaders import load_datasets, load_data_loaders, concat_datasets_and_get_proportion, load_data_loaders_inference, logger as dl_logger
 from utils.operations import setup_gpu
-from utils.optuna_related import main_optuna
+#from utils.optuna_related import main_optuna
 #from utils.optuna_ensmeble import main_optuna
 from utils.ensemble import logger as ensemble_logger
 
-from utils.gui import startGui
+import utils.gui as GUI
 
 # Esto es para tener el logger
 logger = getLogWritter(__name__)
@@ -124,12 +124,14 @@ if __name__ == "__main__":
         lista_loggers = [ap.logger, dl_logger, metrics_logger, mr.logger, t.logger, logger, ensemble_logger]
         set_level(lista_loggers, cons.loggin_level)
     
-    if args[cons.USE_GUI]:
-        startGui()
+    if args[cons.USE_GUI] or True:
+        # GUI.startGui(args)
+        GUI.main()
     else:
         #main(args)
         if args[cons.IS_HYPERTUNING]:
-            main_optuna(args)
+            #main_optuna(args)
+            pass
         else:
             main(args)
 # -- Fin verdadero main -- #
